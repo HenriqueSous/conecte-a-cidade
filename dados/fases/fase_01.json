@@ -1,0 +1,23 @@
+{
+  "id": 1,
+  "nome": "Primeiras Conexões",
+  "orcamento": 74,
+  "par": 46,
+  "sem_cruzamento": false,
+  "casas": [
+    { "id": 0, "x": 180, "y": 350, "central": true },
+    { "id": 1, "x": 380, "y": 200 },
+    { "id": 2, "x": 400, "y": 500 },
+    { "id": 3, "x": 650, "y": 220 },
+    { "id": 4, "x": 700, "y": 480 }
+  ],
+  "ligacoes": [
+    { "de": 0, "para": 1, "custo": 12 },
+    { "de": 0, "para": 2, "custo": 10 },
+    { "de": 1, "para": 2, "custo": 15 },
+    { "de": 1, "para": 3, "custo": 14 },
+    { "de": 2, "para": 3, "custo": 13 },
+    { "de": 2, "para": 4, "custo": 18 },
+    { "de": 3, "para": 4, "custo": 11 }
+  ]
+}
