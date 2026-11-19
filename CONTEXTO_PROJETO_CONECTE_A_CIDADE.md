@@ -43,9 +43,9 @@
 
 **Conecte a Cidade** é um jogo 2D de puzzle e estratégia no qual o jogador assume o papel de um planejador de redes responsável por conectar as casas de um bairro. O objetivo de cada fase é ligar todas as casas à rede (de internet, energia ou outro serviço) utilizando o menor custo financeiro possível, respeitando um orçamento limitado. Ao final, o jogo compara a solução do jogador com a solução ideal e atribui uma pontuação de acordo com o aproveitamento obtido.
 
-O mapa de cada fase é modelado como um grafo não orientado e ponderado: as casas são os vértices, as ligações possíveis entre elas são as arestas, e o custo de cada ligação é o peso da aresta. A fase é concluída quando o grafo formado pelas ligações escolhidas se torna conexo, e a solução ideal é obtida por meio dos algoritmos de árvore geradora mínima de Prim e Kruskal. Além deles, o projeto aplica outros conceitos da disciplina, como conectividade e planaridade, em fases nas quais as ligações não podem se cruzar. A dificuldade é crescente ao longo das fases.
+O mapa de cada fase é modelado como um grafo não orientado e ponderado: as casas são os vértices, as ligações possíveis entre elas são as arestas, e o custo de cada ligação é o peso da aresta. A fase é concluída quando o grafo formado pelas ligações escolhidas se torna conexo, e a solução ideal é obtida por meio dos algoritmos de árvore geradora mínima de Prim e Kruskal nas fases 1 e 2 e por busca exata com poda nas fases 3 a 5. Além deles, o projeto aplica outros conceitos da disciplina, como conectividade e planaridade, em fases nas quais as ligações não podem se cruzar. A dificuldade é crescente ao longo das fases.
 
-**Número de fases: 10.**
+**Número de fases: 5.**
 
 ---
 
@@ -87,7 +87,7 @@ O custo **não** deve ser calculado a partir da distância na tela. Em testes an
 
 - Cada fase tem um **orçamento rígido**, definido no JSON.
 - Se o custo do novo cabo fizer o gasto total ultrapassar o orçamento, o cabo **não é construído** e o jogo avisa.
-- O orçamento é calculado como `ceil(par × fator)`. O fator diminui ao longo das fases (veja a seção 7).
+- O orçamento é calculado como `ceil(par × fator)`. O fator diminui ao longo das fases (veja a seção 8).
 
 ### 6.3 Vitória
 
@@ -129,34 +129,31 @@ Em fases com a regra `sem_cruzamento: true`:
   - ★★: aproveitamento ≥ 85 %.
   - ★: fase concluída.
 - Guardar o **melhor resultado** de cada fase.
-- Pontuação total = soma dos melhores pontos de cada fase.
+- Pontuação total = soma dos melhores pontos das cinco fases, com máximo de 5000.
 - A tela de resultado mostra: custo do jogador, par, aproveitamento, estrelas e pontos.
 
 ---
 
-## 8. Design das 10 fases
+## 8. Design das 5 fases
 
 Cada fase é um arquivo JSON **criado à mão** (não gerado aleatoriamente em tempo de execução). A dificuldade cresce de forma gradual. Os números abaixo são **metas de design**, e a IA deve ajustá-los depois de validar com a ferramenta da seção 12.
 
 | Fase | Casas | Ligações possíveis (aprox.) | Fator do orçamento | Sem cruzamento | Objetivo de design |
 |---|---|---|---|---|---|
-| 1 | 5 | 6 a 8 | 1,60 | Não | Tutorial. Aprender a clicar e ligar |
-| 2 | 6 | 8 a 10 | 1,50 | Não | Perceber que cabos extras gastam dinheiro |
-| 3 | 7 | 10 a 13 | 1,40 | Não | Primeira armadilha: custo curto não significa barato |
-| 4 | 8 | 12 a 16 | 1,30 | Não | Várias rotas parecidas, exige comparar |
-| 5 | 9 | 14 a 19 | 1,22 | Não | Orçamento apertado, sem margem para erro |
-| 6 | 9 | 14 a 19 | 1,40 | **Sim** | Introduz a regra de cruzamento (orçamento folgado de novo) |
-| 7 | 10 | 16 a 22 | 1,30 | **Sim** | Cruzamento + várias armadilhas |
-| 8 | 11 | 18 a 25 | 1,20 | **Sim** | Cruzamento + orçamento apertado |
-| 9 | 12 | 20 a 28 | 1,12 | **Sim** | Pouca folga, exige planejar a ordem |
-| 10 | 14 | 24 a 34 | 1,05 | **Sim** | Desafio final, margem mínima |
+| 1 | 5 | 6 a 8 | 1,60 | Não | Aprender a selecionar casas, construir e remover cabos com margem para experimentar |
+| 2 | 8 | 12 a 16 | 1,40 | Não | Comparar rotas, identificar cabos curtos caros e evitar ciclos que consomem orçamento |
+| 3 | 9 | 14 a 19 | 1,32 | **Sim** | Aprender o bloqueio por cruzamento com folga para corrigir escolhas. Um cabo barato pode impedir uma combinação mais econômica |
+| 4 | 12 | 20 a 28 | 1,18 | **Sim** | Resolver conflitos em várias regiões do mapa. Uma escolha local pode tornar cara ou inviável a conexão de outra região |
+| 5 | 14 | 24 a 34 | 1,05 | **Sim** | Planejar a rede inteira com margem mínima. Trocar um único cabo da solução ideal por uma alternativa aparentemente boa pode estourar o orçamento |
+
+A fase 2 concentra os desafios de custo e de comparação entre rotas. A fase 3 introduz a restrição geométrica com um pequeno aumento no tamanho do mapa. A fase 4 combina os conflitos geométricos com orçamento apertado, e a fase 5 mantém as 14 casas e o fator 1,05 previstos para o desafio final.
 
 ### Critérios de qualidade de cada fase
 
 - O grafo é **conexo** (existe solução).
-- Os custos **não são proporcionais à distância**. Mostrar isso em pelo menos 30 % das ligações a partir da fase 3.
-- A solução ótima **não deve ser obtida** ligando sempre a vizinha mais próxima. A ferramenta de validação deve emitir um aviso se isso acontecer a partir da fase 3.
-- Nas fases com `sem_cruzamento`, deve haver **pelo menos uma ligação barata que cruza** outra (armadilha) e, idealmente, o par exige abrir mão dela.
+- Os custos **não são proporcionais à distância**. Mostrar isso em pelo menos 30 % das ligações a partir da fase 2.
+- A solução ótima **não deve ser obtida** ligando sempre a vizinha mais próxima. A ferramenta de validação deve emitir um aviso se isso acontecer a partir da fase 2.
+- Nas fases com `sem_cruzamento`, deve haver **pelo menos uma ligação barata que cruza** outra (armadilha) e o par com a restrição deve superar o custo da AGM sem restrição. Assim, a regra geométrica muda a solução ideal.
 - Nenhuma ligação deve atravessar uma casa que não seja seu extremo (evitar ambiguidade visual).
 - As casas ficam dentro da área jogável e com distância mínima entre si de pelo menos 80 px.
 - Os rótulos de custo não devem ficar sobrepostos. Ajustar posições se necessário.
@@ -172,12 +169,12 @@ Todos em `src/algoritmos.py` e em `src/geometria.py`, **sem importar pygame** e 
 | **Kruskal** (com união-busca / union-find) | Calcula o par da fase sem restrição de cruzamento |
 | **Prim** | Segundo cálculo independente do par. Serve para **validação cruzada**: o custo deve ser igual ao de Kruskal em todas as fases |
 | **BFS** (ou DFS) | Verifica a conectividade, identifica as casas na rede e detecta cabo redundante |
-| **Interseção de segmentos** (teste de orientação) | Regra de cruzamento das fases 6 a 10 |
+| **Interseção de segmentos** (teste de orientação) | Regra de cruzamento das fases 3 a 5 |
 | **Busca exata com poda** (backtracking + limite inferior por AGM) | Calcula o par nas fases com `sem_cruzamento`, onde Kruskal/Prim sozinhos **não bastam** (veja a nota abaixo) |
 
 ### Nota importante sobre o par nas fases com cruzamento proibido
 
-A árvore geradora mínima comum pode conter cabos que se cruzam. Nas fases 6 a 10, o par precisa ser o **menor custo entre as soluções que não têm cruzamentos**. Por isso:
+A árvore geradora mínima comum pode conter cabos que se cruzam. Nas fases 3 a 5, o par precisa ser o **menor custo entre as soluções que não têm cruzamentos**. Por isso:
 
 - A ferramenta de validação deve calcular esse par por **busca exata**: enumerar as arestas em ordem de custo, decidir incluir ou excluir cada uma, rejeitar a escolha que cause cruzamento ou ciclo, e **podar** quando `custo_atual + limite_inferior ≥ melhor_encontrado`. O limite inferior pode ser a AGM do que resta, ignorando os cruzamentos.
 - Para até 14 casas e cerca de 34 arestas, isso roda rápido.
@@ -246,7 +243,7 @@ conecte-a-cidade/
 ├── dados/
 │   └── fases/
 │       ├── fase_01.json
-│       └── ... fase_10.json
+│       └── ... fase_05.json
 ├── ferramentas/
 │   └── validar_fases.py       # valida as fases e calcula/confere o par
 ├── tests/
@@ -262,20 +259,26 @@ conecte-a-cidade/
 
 ```json
 {
-  "id": 6,
-  "nome": "Sem cruzar!",
-  "orcamento": 52,
-  "par": 37,
-  "sem_cruzamento": true,
+  "id": 1,
+  "nome": "Primeiras Conexões",
+  "orcamento": 74,
+  "par": 46,
+  "sem_cruzamento": false,
   "casas": [
-    { "id": 0, "x": 120, "y": 300, "central": true },
-    { "id": 1, "x": 300, "y": 180 },
-    { "id": 2, "x": 310, "y": 420 }
+    { "id": 0, "x": 180, "y": 350, "central": true },
+    { "id": 1, "x": 380, "y": 200 },
+    { "id": 2, "x": 400, "y": 500 },
+    { "id": 3, "x": 650, "y": 220 },
+    { "id": 4, "x": 700, "y": 480 }
   ],
   "ligacoes": [
-    { "de": 0, "para": 1, "custo": 6 },
-    { "de": 0, "para": 2, "custo": 9 },
-    { "de": 1, "para": 2, "custo": 4 }
+    { "de": 0, "para": 1, "custo": 12 },
+    { "de": 0, "para": 2, "custo": 10 },
+    { "de": 1, "para": 2, "custo": 15 },
+    { "de": 1, "para": 3, "custo": 14 },
+    { "de": 2, "para": 3, "custo": 13 },
+    { "de": 2, "para": 4, "custo": 18 },
+    { "de": 3, "para": 4, "custo": 11 }
   ]
 }
 ```
@@ -309,10 +312,10 @@ Usar a chave canônica `(min(u, v), max(u, v))` para arestas não orientadas.
 Rodar com `python ferramentas/validar_fases.py`. Para cada fase, deve:
 
 1. Checar que o JSON é válido e que o grafo é **conexo**.
-2. Calcular o par com **Kruskal** e com **Prim** e **falhar** se divergirem.
-3. Se `sem_cruzamento`, calcular o par com a **busca exata**, conferir `par_exato ≥ custo_AGM` e gravar o valor.
+2. Calcular o custo da AGM com **Kruskal** e **Prim** e **falhar** se divergirem. Nas fases 1 e 2, conferir que esse custo coincide com o par.
+3. Se `sem_cruzamento`, calcular o par com a **busca exata**, conferir `par_exato > custo_AGM` como critério de design das fases 3 a 5 e gravar o valor.
 4. Conferir que o orçamento é coerente com `ceil(par × fator)` da tabela.
-5. Avisar (sem falhar) se a heurística "ligar sempre a vizinha mais próxima" atingir o par a partir da fase 3.
+5. Avisar (sem falhar) se a heurística "ligar sempre a vizinha mais próxima" atingir o par a partir da fase 2.
 6. Avisar se houver rótulos de custo sobrepostos ou ligações que atravessem outra casa.
 7. Imprimir um resumo: casas, ligações, par, orçamento, folga e tempo de cálculo.
 
@@ -323,9 +326,9 @@ Rodar com `python ferramentas/validar_fases.py`. Para cada fase, deve:
 ### Telas
 
 1. **Menu principal:** Jogar, Como jogar (3 linhas de instrução), Sair.
-2. **Seleção de fases:** grade com as 10 fases, estrelas obtidas e fases **bloqueadas** até concluir a anterior.
+2. **Seleção de fases:** grade com as 5 fases, estrelas obtidas e fases **bloqueadas** até concluir a anterior.
 3. **Jogo:** mapa + HUD.
-4. **Resultado:** custo, par, aproveitamento, estrelas, pontos e botões *Repetir* e *Próxima fase*.
+4. **Resultado:** custo, par, aproveitamento, estrelas, pontos e botões *Repetir* e *Próxima fase*. No resultado da fase 5, mostrar *Voltar à seleção* no lugar de *Próxima fase*.
 5. **Pausa (ESC):** Continuar, Reiniciar, Voltar ao menu.
 
 ### HUD durante a partida
@@ -362,7 +365,7 @@ Rodar com `python ferramentas/validar_fases.py`. Para cada fase, deve:
 
 - Arquivo `progresso.json` ao lado do jogo, com: fases concluídas, melhores custo, estrelas e pontos por fase.
 - Salvar ao concluir uma fase. Carregar ao iniciar.
-- A fase `n+1` é liberada ao concluir a fase `n`.
+- Ao concluir uma das fases de 1 a 4, liberar a seguinte. Ao concluir a fase 5, registrar a conclusão da campanha.
 - Um modo de desenvolvimento (por exemplo, a variável de ambiente `CONECTE_DEV=1`) libera todas as fases para testes.
 
 ---
@@ -376,8 +379,8 @@ Cada marco deve **terminar com o jogo rodando**. Não avance para o próximo se 
 3. **Regras do jogo:** `jogo.py` e `pontuacao.py` completos, testados sem janela (construir, remover, desfazer, orçamento, vitória, beco sem saída, cruzamento).
 4. **Interface mínima jogável:** janela, mapa, clique para ligar, HUD básico. Fase 1 jogável do começo ao fim.
 5. **Telas e fluxo:** menu, seleção, resultado, pausa, progresso.
-6. **As 10 fases:** criar os JSON, rodar a validação, ajustar custos, orçamentos e posições.
-7. **Busca exata com poda** e par das fases 6 a 10.
+6. **Busca exata com poda:** implementar e validar o cálculo do par com restrição de cruzamento.
+7. **As 5 fases:** criar os JSON, calcular e conferir o par de cada fase e ajustar custos, orçamentos e posições.
 8. **Acabamento:** halo das casas acesas, animações leves, mensagens, correção de rótulos sobrepostos.
 9. **Documentação:** `README.md`, `docs/CONCEITOS.md`, revisão de comentários.
 
@@ -390,7 +393,7 @@ Usar `pytest` (ou `unittest`). Mínimo:
 - **Algoritmos:** Kruskal e Prim dão o mesmo custo em grafos conhecidos e em grafos aleatórios pequenos (comparar também com NetworkX, *apenas nos testes*). BFS identifica as componentes corretamente. União-busca funciona.
 - **Geometria:** cruzamento em X, extremo compartilhado (não cruza), toque em T (cruza), colinear sobreposto (cruza), colinear separado (não cruza), segmentos paralelos.
 - **Jogo:** construir e remover; desfazer; orçamento excedido bloqueia; vitória ao conectar tudo; cabo redundante identificado; cruzamento bloqueado só quando a regra está ativa; beco sem saída detectado; reiniciar volta ao estado inicial.
-- **Fases:** as 10 fases carregam, são conexas, e `par` coincide com o recalculado.
+- **Fases:** as 5 fases carregam, são conexas, e `par` coincide com o recalculado.
 - **Pontuação:** custo igual ao par dá 3 estrelas e 1000 pontos; limites de 85 % corretos.
 
 ---
@@ -398,10 +401,10 @@ Usar `pytest` (ou `unittest`). Mínimo:
 ## 17. Critérios de aceite (definição de pronto)
 
 - [ ] `python main.py` abre o jogo em qualquer sistema com Python 3.10+ e `pygame-ce`.
-- [ ] As 10 fases existem, são jogáveis e a dificuldade cresce visivelmente.
-- [ ] As fases 6 a 10 impõem a regra de não cruzamento, com feedback claro.
-- [ ] O par de cada fase é confirmado por Kruskal **e** Prim (e pela busca exata nas fases com cruzamento).
-- [ ] Nenhuma fase é resolvida ligando sempre a vizinha mais próxima (aviso resolvido ou justificado).
+- [ ] As 5 fases existem, são jogáveis e a dificuldade cresce visivelmente.
+- [ ] As fases 3 a 5 impõem a regra de não cruzamento, com feedback claro.
+- [ ] Kruskal e Prim concordam em todas as fases. O par das fases 1 e 2 é o custo da AGM, e o das fases 3 a 5 é confirmado pela busca exata sem cruzamentos.
+- [ ] Da fase 2 em diante, a estratégia da vizinha mais próxima é conferida e qualquer aviso é resolvido ou justificado.
 - [ ] A lógica funciona sem `pygame` (os testes passam sem abrir janela).
 - [ ] Nenhum algoritmo de grafos vem de biblioteca externa na lógica do jogo.
 - [ ] O código está comentado em português e cada algoritmo cita o conceito da disciplina.
