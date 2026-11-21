@@ -11,6 +11,8 @@ import pytest
 
 from main import ALTURA_TELA, LARGURA_TELA, RAIZ_PROJETO, Aplicacao, main
 from src import fases
+from src.interface import COR_PREVIA_INVALIDA, COR_PREVIA_VALIDA, RenderizadorJogo
+from src.jogo import Jogo
 from src.pontuacao import avaliar_resultado
 from src.progresso import Progresso
 
@@ -178,6 +180,85 @@ def test_catalogo_ignora_fase_invalida(projeto_temporario):
     caminho_invalido = projeto_temporario / "dados" / "fases" / "fase_03.json"
     caminho_invalido.write_text("[]", encoding="utf-8")
     assert list(fases.carregar_catalogo_fases(str(projeto_temporario))) == [1]
+
+
+def test_fase_03_previa_so_bloqueia_apos_construir_cabo(superficie):
+    fase = fases.carregar_fase(fases.obter_caminho_fase(3, RAIZ_PROJETO))
+    jogo = Jogo(fase)
+    renderizador = RenderizadorJogo()
+    alvo = fase.obter_posicao(4)
+    # Ponto no primeiro quarto de 2–4, fora do rótulo e dos sprites.
+    ponto_na_previa = (666, 238)
+
+    jogo.selecionar_casa(2)
+    renderizador.desenhar(superficie, jogo, alvo)
+    assert superficie.get_at(ponto_na_previa)[:3] == COR_PREVIA_VALIDA
+
+    jogo.cancelar_selecao()
+    jogo.selecionar_casa(1)
+    assert jogo.selecionar_casa(3)
+    assert jogo.pode_construir(0, 1)[0]  # Compartilha a casa 1 com o cabo construído.
+    jogo.selecionar_casa(2)
+    renderizador.desenhar(superficie, jogo, alvo)
+    assert superficie.get_at(ponto_na_previa)[:3] == COR_PREVIA_INVALIDA
+    assert not jogo.selecionar_casa(4)
+    assert jogo.mensagem_feedback == "Este cabo cruzaria outro cabo."
+    assert jogo.gasto == 5 and jogo.cabos_construidos == {(1, 3)}
+
+    assert jogo.desfazer()
+    jogo.selecionar_casa(2)
+    assert jogo.selecionar_casa(4)
+
+
+def test_fase_03_desbloqueio_e_resultados(projeto_temporario, superficie, monkeypatch):
+    pasta_fases = projeto_temporario / "dados" / "fases"
+    for nome in ["fase_02.json", "fase_03.json"]:
+        copyfile(RAIZ_PROJETO / "dados" / "fases" / nome, pasta_fases / nome)
+
+    carregar_fase_real = fases.carregar_fase
+
+    def carregar_fase_existente(caminho):
+        assert Path(caminho).is_file()
+        return carregar_fase_real(caminho)
+
+    monkeypatch.setattr(fases, "carregar_fase", carregar_fase_existente)
+    aplicacao = Aplicacao(superficie, projeto_temporario)
+    aplicacao.progresso.registrar_conclusao(1, avaliar_resultado(46, 46))
+    clicar_botao(aplicacao, "Selecionar Fase")
+    assert [cartao.situacao for cartao in aplicacao.cartoes] == [
+        "Concluída", "Disponível", "Bloqueada", "Em breve", "Em breve"
+    ]
+    clicar(aplicacao, aplicacao.cartoes[2].botao.area.center)
+    assert aplicacao.jogo is None
+    clicar(aplicacao, aplicacao.cartoes[1].botao.area.center)
+    conectar(aplicacao, [(0, 3), (2, 3), (3, 6), (2, 5), (4, 6), (1, 4), (5, 7)])
+    clicar_botao(aplicacao, "Próxima fase")
+    assert aplicacao.jogo.fase.id == 3
+
+    aplicacao = Aplicacao(superficie, projeto_temporario)
+    clicar_botao(aplicacao, "Jogar")
+    assert aplicacao.jogo.fase.id == 3
+    conectar(aplicacao, [(1, 3)])
+    pressionar_esc(aplicacao)
+    clicar_botao(aplicacao, "Reiniciar fase")
+    assert aplicacao.jogo.gasto == 0
+
+    conectar(aplicacao, [(0, 1), (0, 4), (1, 3), (2, 6), (3, 7), (4, 5), (6, 7), (7, 8)])
+    assert aplicacao.tela_atual == "resultado"
+    assert aplicacao.jogo.resultado.custo_jogador == 82
+    assert aplicacao.jogo.resultado.estrelas == 2
+    assert "Próxima fase" not in [botao.texto for botao in aplicacao.botoes]
+    clicar_botao(aplicacao, "Repetir fase")
+    conectar(aplicacao, [(0, 1), (0, 4), (2, 4), (2, 6), (3, 4), (3, 7), (4, 5), (7, 8)])
+    assert aplicacao.tela_atual == "resultado"
+    clicar_botao(aplicacao, "Voltar à seleção de fases")
+    assert aplicacao.cartoes[2].situacao == "Concluída"
+    assert [cartao.situacao for cartao in aplicacao.cartoes[3:]] == ["Em breve", "Em breve"]
+
+    reaberto = Aplicacao(superficie, projeto_temporario)
+    registro = reaberto.progresso.obter(3)
+    assert registro.concluida
+    assert (registro.melhor_custo, registro.melhor_pontuacao, registro.estrelas) == (74, 1000, 3)
 
 
 @pytest.mark.parametrize("conteudo", ["{", "[]", '{"fases": {"1": false}}'])

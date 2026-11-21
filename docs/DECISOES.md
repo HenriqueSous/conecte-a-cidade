@@ -12,3 +12,5 @@ Este documento registra decisões pontuais de arquitetura e implementação toma
 - 2026-11-21: O jogo salva a conclusão e os recordes por fase em `progresso.json` antes de mostrar o resultado da partida.
 - 2026-11-21: A fase 2 usa 8 casas e 14 ligações, com custos definidos à mão para oferecer rotas alternativas. O par é 79 e o orçamento é 111 pelo fator 1,40 da seção 8.
 - 2026-11-21: O validador usa Prim com distâncias para medir a estratégia da vizinha mais próxima e soma os custos reais dos cabos selecionados.
+- 2026-11-21: Encruzilhada usa um único cruzamento entre dois cabos baratos. O par sem cruzamentos é 74, a AGM convencional custa 66 e o orçamento é 98 pelo fator 1,32.
+- 2026-11-21: A busca exata calcula o par no validador. Durante a partida, os cabos instalados também filtram as opções consideradas no limite inferior de custo restante.

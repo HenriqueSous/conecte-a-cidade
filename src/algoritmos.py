@@ -1,14 +1,18 @@
 """
 Algoritmos de teoria dos grafos implementados manualmente para o jogo Conecte a Cidade.
 Contém Busca em Largura (BFS), estrutura União-Busca (Disjoint Set Union),
-algoritmo de Kruskal e algoritmo de Prim para Árvore Geradora Mínima (AGM).
+Kruskal, Prim e busca exata com poda para árvores geradoras sem cruzamentos.
 Nenhuma biblioteca externa de grafos é utilizada neste módulo.
 """
 
 from collections import deque
 import heapq
-from typing import Dict, List, Optional, Set, Tuple
+from itertools import combinations
+from typing import Dict, List, Optional, Sequence, Set, Tuple
+from src.geometria import Ponto, segmentos_se_cruzam
 from src.grafo import Grafo
+
+ArestaPonderada = Tuple[int, int, int]
 
 
 class UniaoBusca:
@@ -248,3 +252,53 @@ def calcular_limite_inferior_restante(
 
     # Se esgotou as arestas disponíveis e ainda não conectou tudo, é impossível
     return None
+
+
+def buscar_agm_sem_cruzamentos(
+    posicoes: Sequence[Ponto], arestas: Sequence[ArestaPonderada]
+) -> tuple[int, list[ArestaPonderada]] | None:
+    """Retorna custo e cabos da árvore ótima sem cruzamentos, ou None se ela não existir.
+
+    Conceito da disciplina: backtracking com poda por um limite inferior de AGM.
+    A busca decide incluir ou excluir cada cabo em ordem crescente de custo.
+    """
+    n = len(posicoes)
+    if n <= 1:
+        return 0, []
+
+    ordenadas = sorted(arestas, key=lambda aresta: aresta[2])
+    conflitos: dict[ArestaPonderada, set[ArestaPonderada]] = {a: set() for a in ordenadas}
+    for primeira, segunda in combinations(ordenadas, 2):
+        u, v, _ = primeira
+        a, b, _ = segunda
+        if segmentos_se_cruzam(posicoes[u], posicoes[v], posicoes[a], posicoes[b]):
+            # Basta guardar o conflito na aresta que a busca visita primeiro.
+            conflitos[primeira].add(segunda)
+
+    escolhidas: list[ArestaPonderada] = []
+    melhor: tuple[int, list[ArestaPonderada]] | None = None
+
+    def buscar(disponiveis: list[ArestaPonderada], custo: int) -> None:
+        nonlocal melhor
+        if len(escolhidas) == n - 1:
+            if melhor is None or custo < melhor[0]:
+                melhor = (custo, escolhidas.copy())
+            return
+
+        pares = [(u, v) for u, v, _ in escolhidas]
+        # Ignorar conflitos entre as arestas restantes só pode reduzir a estimativa.
+        limite = calcular_limite_inferior_restante(n, pares, disponiveis)
+        if limite is None or (melhor is not None and custo + limite >= melhor[0]):
+            return
+
+        proxima, *restantes = disponiveis
+        u, v, peso = proxima
+        if not detectar_cabo_redundante(n, pares, u, v):
+            escolhidas.append(proxima)
+            compativeis = [aresta for aresta in restantes if aresta not in conflitos[proxima]]
+            buscar(compativeis, custo + peso)
+            escolhidas.pop()
+        buscar(restantes, custo)
+
+    buscar(ordenadas, 0)
+    return melhor

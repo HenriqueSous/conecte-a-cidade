@@ -11,7 +11,8 @@ from src.algoritmos import (
     bfs_componente,
     verificar_conectividade,
     detectar_cabo_redundante,
-    calcular_limite_inferior_restante
+    calcular_limite_inferior_restante,
+    buscar_agm_sem_cruzamentos,
 )
 
 
@@ -78,3 +79,13 @@ def test_limite_inferior_restante():
     # Para ligar {0, 1}, {2}, {3}: precisa de 10 + 5 = 15
     limite = calcular_limite_inferior_restante(4, construidas, disponiveis)
     assert limite == 15
+
+
+def test_busca_exata_rejeita_cruzamento_e_testa_alternativa():
+    posicoes = [(0, 0), (100, 100), (0, 100), (100, 0)]
+    arestas = [(0, 1, 1), (2, 3, 2), (0, 2, 3)]
+    assert kruskal(4, arestas)[0] == 6
+    assert buscar_agm_sem_cruzamentos(posicoes, arestas) is None
+
+    arestas.append((1, 3, 7))
+    assert buscar_agm_sem_cruzamentos(posicoes, arestas) == (11, [(0, 1, 1), (0, 2, 3), (1, 3, 7)])

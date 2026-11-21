@@ -64,3 +64,12 @@ Este documento relaciona os tópicos teóricos da disciplina com a respectiva im
   - `orientacao(p, q, r)`: Produto vetorial para orientação horária, anti-horária ou colinear.
   - `segmentos_se_cruzam(p1, q1, p2, q2)`: Regra que bloqueia cruzamentos em X, toques em T e sobreposição colinear, permitindo conexões em extremos compartilhados.
 - **Uso no jogo:** Aplicado em fases com restrição de não cruzamento (`sem_cruzamento: true`).
+
+---
+
+## 8. Busca Exata com Poda
+
+- **Arquivo e função** — `src/algoritmos.py`, em `buscar_agm_sem_cruzamentos`.
+- **Busca** — percorre as ligações por custo e explora a decisão de incluir ou excluir cada uma. A inclusão descarta cabos conflitantes dos passos seguintes e só é aceita quando une componentes diferentes.
+- **Poda** — contrai os componentes já ligados e usa a AGM restante como limite inferior. Se esse limite e o gasto atual já atingem o custo da melhor rede encontrada, o ramo pode ser descartado.
+- **Uso** — o validador calcula o par de Encruzilhada. A partida usa o par gravado no JSON.

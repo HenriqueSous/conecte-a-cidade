@@ -1,0 +1,36 @@
+{
+  "id": 3,
+  "nome": "Encruzilhada",
+  "orcamento": 98,
+  "par": 74,
+  "sem_cruzamento": true,
+  "casas": [
+    { "id": 0, "x": 137, "y": 337, "central": true },
+    { "id": 1, "x": 285, "y": 156 },
+    { "id": 2, "x": 755, "y": 164 },
+    { "id": 3, "x": 641, "y": 470 },
+    { "id": 4, "x": 400, "y": 460 },
+    { "id": 5, "x": 205, "y": 544 },
+    { "id": 6, "x": 883, "y": 247 },
+    { "id": 7, "x": 839, "y": 472 },
+    { "id": 8, "x": 705, "y": 591 }
+  ],
+  "ligacoes": [
+    { "de": 0, "para": 1, "custo": 9 },
+    { "de": 0, "para": 4, "custo": 11 },
+    { "de": 0, "para": 5, "custo": 15 },
+    { "de": 1, "para": 2, "custo": 23 },
+    { "de": 1, "para": 3, "custo": 5 },
+    { "de": 1, "para": 4, "custo": 17 },
+    { "de": 2, "para": 3, "custo": 24 },
+    { "de": 2, "para": 4, "custo": 6 },
+    { "de": 2, "para": 6, "custo": 11 },
+    { "de": 2, "para": 7, "custo": 23 },
+    { "de": 3, "para": 4, "custo": 13 },
+    { "de": 3, "para": 7, "custo": 8 },
+    { "de": 3, "para": 8, "custo": 12 },
+    { "de": 4, "para": 5, "custo": 7 },
+    { "de": 6, "para": 7, "custo": 22 },
+    { "de": 7, "para": 8, "custo": 9 }
+  ]
+}

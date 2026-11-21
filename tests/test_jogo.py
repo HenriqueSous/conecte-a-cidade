@@ -2,6 +2,8 @@
 Testes unitários da lógica e regras da partida (sem interface gráfica).
 """
 
+from dataclasses import replace
+
 import pytest
 from src.fases import carregar_fase, obter_caminho_fase
 from src.jogo import Jogo
@@ -141,3 +143,25 @@ def test_fase_02_detecta_beco_sem_saida_e_permite_corrigir():
     assert jogo.resultado.custo_jogador == 97
     assert jogo.resultado.pontos == 814
     assert jogo.resultado.estrelas == 1
+
+
+def test_fase_03_considera_cruzamentos_ao_detectar_beco_sem_saida():
+    fase = carregar_fase(obter_caminho_fase(3))
+    # Com 81, a fase é viável, mas a alternativa que mantém o cabo 1–3 custa 82.
+    jogo = Jogo(replace(fase, orcamento=81))
+    assert not jogo.beco_sem_saida
+    assert jogo.selecionar_casa(1)
+    assert jogo.selecionar_casa(3)
+    assert jogo.beco_sem_saida
+    assert jogo.desfazer()
+    assert not jogo.beco_sem_saida
+    assert jogo.pode_construir(2, 4)[0]
+
+
+def test_cabos_em_x_permitidos_com_regra_desativada():
+    fase = carregar_fase(obter_caminho_fase(3))
+    jogo = Jogo(replace(fase, sem_cruzamento=False))
+    for origem, destino in [(1, 3), (2, 4)]:
+        assert jogo.selecionar_casa(origem)
+        assert jogo.selecionar_casa(destino)
+    assert jogo.cabos_construidos == {(1, 3), (2, 4)}

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 import pygame
 
-from src.jogo import Jogo
+from src.jogo import Jogo, MENSAGEM_CRUZAMENTO
 
 PASTA_ASSETS = Path(__file__).resolve().parents[1] / "assets" / "conecte_a_cidade_v1"
 
@@ -294,7 +294,8 @@ class RenderizadorJogo:
                 sup.blit(self.icone_alerta, self.icone_alerta.get_rect(midright=(rect_regra.left - 4, rect_regra.centery)))
 
         # 4. Mensagem de Feedback de uma linha
-        cor_feedback = COR_ALERTA if jogo.beco_sem_saida else COR_TEXTO_MUTED
+        cruzamento_bloqueado = jogo.mensagem_feedback == MENSAGEM_CRUZAMENTO
+        cor_feedback = COR_ALERTA if jogo.beco_sem_saida or cruzamento_bloqueado else COR_TEXTO_MUTED
         txt_msg = self.fonte_pequena.render(jogo.mensagem_feedback, True, cor_feedback)
         sup.blit(txt_msg, (320, 14))
 

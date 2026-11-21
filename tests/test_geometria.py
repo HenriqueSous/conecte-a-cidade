@@ -33,6 +33,11 @@ def test_colinear_sobreposto_cruza():
     assert segmentos_se_cruzam(s1[0], s1[1], s2[0], s2[1]) is True
 
 
+def test_colinear_com_extremo_compartilhado():
+    assert segmentos_se_cruzam((0, 0), (10, 0), (0, 0), (5, 0)) is True
+    assert segmentos_se_cruzam((0, 0), (10, 0), (0, 0), (-5, 0)) is False
+
+
 def test_colinear_separado_nao_cruza():
     # Dois segmentos na mesma linha mas distantes
     s1 = ((0, 0), (5, 0))

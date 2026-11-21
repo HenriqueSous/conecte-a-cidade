@@ -16,6 +16,8 @@ from src.algoritmos import (
 from src.geometria import segmentos_se_cruzam
 from src.pontuacao import avaliar_resultado, ResultadoPartida
 
+MENSAGEM_CRUZAMENTO = "Este cabo cruzaria outro cabo."
+
 
 class Jogo:
     """
@@ -112,20 +114,26 @@ class Jogo:
         if (u_can, v_can) in self.cabos_construidos:
             return True, "Remover cabo existente"
 
+        if self._cruza_cabo_construido(u_can, v_can):
+            return False, MENSAGEM_CRUZAMENTO
+
         custo = self.fase.grafo.custo(u_can, v_can) or 0
         if self.gasto + custo > self.fase.orcamento:
             return False, "Orçamento insuficiente"
 
-        if self.fase.sem_cruzamento:
-            p1 = self.fase.obter_posicao(u_can)
-            q1 = self.fase.obter_posicao(v_can)
-            for c_u, c_v in self.cabos_construidos:
-                p2 = self.fase.obter_posicao(c_u)
-                q2 = self.fase.obter_posicao(c_v)
-                if segmentos_se_cruzam(p1, q1, p2, q2):
-                    return False, "Este cabo cruzaria outro cabo"
-
         return True, "Construção permitida"
+
+    def _cruza_cabo_construido(self, u: int, v: int) -> bool:
+        """Consulta só os cabos já instalados em fases com a restrição ativa."""
+        if not self.fase.sem_cruzamento:
+            return False
+
+        origem = self.fase.obter_posicao(u)
+        destino = self.fase.obter_posicao(v)
+        return any(
+            segmentos_se_cruzam(origem, destino, self.fase.obter_posicao(a), self.fase.obter_posicao(b))
+            for a, b in self.cabos_construidos
+        )
 
     def _construir_cabo(self, u: int, v: int, registrar_historico: bool = True) -> bool:
         """Constrói um cabo entre u e v se respeitar o orçamento e regras."""
@@ -244,6 +252,7 @@ class Jogo:
             (lig.de, lig.para, lig.custo)
             for lig in self.fase.ligacoes
             if (min(lig.de, lig.para), max(lig.de, lig.para)) not in self.cabos_construidos
+            and not self._cruza_cabo_construido(lig.de, lig.para)
         ]
 
         custo_minimo_restante = calcular_limite_inferior_restante(
@@ -252,8 +261,8 @@ class Jogo:
             arestas_disponiveis
         )
 
-        if custo_minimo_restante is None or custo_minimo_restante > self.orcamento_restante:
-            self.beco_sem_saida = True
+        self.beco_sem_saida = custo_minimo_restante is None or custo_minimo_restante > self.orcamento_restante
+        if custo_minimo_restante is None and self.fase.sem_cruzamento:
+            self.mensagem_feedback = "Os cabos atuais bloqueiam a rede. Desfaça ou reinicie."
+        elif self.beco_sem_saida:
             self.mensagem_feedback = "Com esse orçamento não dá para conectar tudo. Desfaça ou reinicie."
-        else:
-            self.beco_sem_saida = False

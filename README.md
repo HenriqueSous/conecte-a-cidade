@@ -40,7 +40,7 @@ python main.py
 
 O jogo abre no menu principal. **Jogar** inicia a primeira fase disponível ainda não concluída. **Selecionar Fase** permite repetir fases desbloqueadas e mostra as estrelas conquistadas. Os espaços reservados para fases futuras aparecem como **Em breve**.
 
-Conclua **Primeiras Conexões** para liberar a fase 2, **Rotas do Bairro**. Compare os custos dos cabos para decidir por onde expandir a rede entre as oito casas.
+Conclua **Primeiras Conexões** para liberar a fase 2, **Rotas do Bairro**. Ao terminar a fase 2, você libera **Encruzilhada**. Nessa fase, cabos instalados podem bloquear novas conexões. A prévia fica vermelha ao apontar para uma ligação bloqueada.
 
 ---
 
@@ -61,7 +61,7 @@ Ao concluir uma fase, o jogo grava a conclusão e os recordes em `progresso.json
 - **Casas ligadas à rede** acendem em **dourado**. As isoladas permanecem em cinza escuro.
 - **Cabos normais** aparecem em **azul ciano**.
 - **Cabos redundantes** (que fecham ciclos desnecessários) aparecem em **laranja**.
-- Ao final, sua pontuação e estrelas (★ a ★★★) são calculadas comparando seu gasto total com a **solução ideal (par)** calculada pela Árvore Geradora Mínima.
+- Ao final, sua pontuação e estrelas (★ a ★★★) são calculadas comparando seu gasto total com o **par**, o menor custo possível dentro das regras da fase.
 
 ---
 
@@ -76,7 +76,7 @@ pytest
 ```bash
 python ferramentas/validar_fases.py
 ```
-A ferramenta verifica o JSON e o orçamento, compara **Kruskal e Prim** e avisa sobre problemas de legibilidade do mapa. A partir da fase 2, também compara o par com o custo de escolher as ligações pela distância visual.
+A ferramenta verifica o JSON e o orçamento, compara **Kruskal e Prim** e avisa sobre problemas de legibilidade do mapa. Em **Encruzilhada**, ela também usa busca exata com poda para conferir o par sem cruzamentos. A opção `--gravar-par` atualiza o par e o orçamento dos mapas com essa restrição.
 
 ---
 
@@ -102,7 +102,8 @@ Conecte a Cidade/
 ├── dados/
 │   └── fases/
 │       ├── fase_01.json        # Primeiras Conexões
-│       └── fase_02.json        # Rotas do Bairro
+│       ├── fase_02.json        # Rotas do Bairro
+│       └── fase_03.json        # Encruzilhada
 ├── ferramentas/
 │   └── validar_fases.py        # Validador de consistência e solução ideal
 ├── tests/
