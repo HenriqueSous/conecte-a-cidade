@@ -6,11 +6,14 @@ Nenhuma biblioteca externa de interface é utilizada neste módulo.
 
 from dataclasses import dataclass
 import json
+import logging
 import math
 import os
 from typing import Any, Dict, List, Tuple
 from src.grafo import Grafo
 from src.algoritmos import verificar_conectividade
+
+TOTAL_FASES = 5
 
 
 @dataclass
@@ -52,13 +55,28 @@ def validar_dados_fase(dados: Dict[str, Any]) -> None:
     Valida a integridade dos campos obrigatórios e das regras geométricas e de grafos.
     Lança ValueError se houver alguma inconsistência.
     """
+    if not isinstance(dados, dict):
+        raise ValueError("O arquivo da fase deve conter um objeto JSON.")
+
     campos_obrigatorios = ["id", "nome", "orcamento", "par", "casas", "ligacoes"]
     for campo in campos_obrigatorios:
         if campo not in dados:
             raise ValueError(f"Campo obrigatório ausente na fase: '{campo}'")
 
+    if type(dados["id"]) is not int or dados["id"] < 1:
+        raise ValueError("O ID da fase deve ser um inteiro positivo.")
+    if not isinstance(dados["nome"], str) or not dados["nome"].strip():
+        raise ValueError("A fase precisa ter um nome.")
+    par, orcamento = dados["par"], dados["orcamento"]
+    if type(par) is not int or type(orcamento) is not int or not 0 < par <= orcamento:
+        raise ValueError("Par e orçamento devem ser inteiros positivos, com par até o orçamento.")
+    if not isinstance(dados.get("sem_cruzamento", False), bool):
+        raise ValueError("A regra 'sem_cruzamento' deve ser true ou false.")
+
     casas_dados = dados["casas"]
     ligacoes_dados = dados["ligacoes"]
+    if not isinstance(casas_dados, list) or not isinstance(ligacoes_dados, list):
+        raise ValueError("Casas e ligações devem ser listas.")
     n = len(casas_dados)
 
     if n < 2:
@@ -67,18 +85,24 @@ def validar_dados_fase(dados: Dict[str, Any]) -> None:
     # Validação dos IDs das casas (deve ser de 0 a n-1)
     ids_encontrados = set()
     for i, c in enumerate(casas_dados):
+        if not isinstance(c, dict):
+            raise ValueError(f"Casa {i} deve ser um objeto JSON.")
         cid = c.get("id")
-        if cid != i:
+        if type(cid) is not int or cid != i:
             raise ValueError(f"Casas devem ter IDs sequenciais de 0 a n-1. Esperado {i}, recebido {cid}")
+        if not isinstance(c.get("central", False), bool):
+            raise ValueError(f"O campo 'central' da casa {i} deve ser true ou false.")
         ids_encontrados.add(cid)
 
     # A casa 0 deve ser a central
-    if not casas_dados[0].get("central", False):
+    if casas_dados[0].get("central") is not True:
         raise ValueError("A casa de ID 0 deve ser a central (central: true).")
 
     # Validação de posições na tela (1000 x 680 com margem para HUD)
-    posicoes = [(c["x"], c["y"]) for c in casas_dados]
+    posicoes = [(c.get("x"), c.get("y")) for c in casas_dados]
     for i, (x, y) in enumerate(posicoes):
+        if type(x) not in (int, float) or type(y) not in (int, float):
+            raise ValueError(f"Casa {i} precisa de coordenadas numéricas.")
         if not (20 <= x <= 980 and 80 <= y <= 660):
             raise ValueError(f"Casa {i} está fora dos limites visíveis da tela: ({x}, {y})")
 
@@ -94,9 +118,11 @@ def validar_dados_fase(dados: Dict[str, Any]) -> None:
     arestas_vistas = set()
 
     for lig in ligacoes_dados:
+        if not isinstance(lig, dict):
+            raise ValueError("Cada ligação deve ser um objeto JSON.")
         u, v, custo = lig.get("de"), lig.get("para"), lig.get("custo")
-        if u is None or v is None or custo is None:
-            raise ValueError("Ligação malformada: deve conter 'de', 'para' e 'custo'.")
+        if any(type(valor) is not int for valor in (u, v, custo)):
+            raise ValueError("Ligação malformada: 'de', 'para' e 'custo' devem ser inteiros.")
         if u not in ids_encontrados or v not in ids_encontrados:
             raise ValueError(f"Ligação ({u}, {v}) referencia casa inexistente.")
         if u == v:
@@ -160,3 +186,21 @@ def obter_caminho_fase(fase_id: int, base_dir: str = ".") -> str:
     """Retorna o caminho relativo do arquivo JSON de uma fase dado seu ID."""
     nome_arquivo = f"fase_{fase_id:02d}.json"
     return os.path.join(base_dir, "dados", "fases", nome_arquivo)
+
+
+def carregar_catalogo_fases(base_dir: str = ".") -> Dict[int, Fase]:
+    """Carrega apenas os arquivos existentes e válidos, na ordem da campanha."""
+    fases = {}
+    for numero in range(1, TOTAL_FASES + 1):
+        caminho = obter_caminho_fase(numero, base_dir)
+        if not os.path.isfile(caminho):
+            continue
+        try:
+            fase = carregar_fase(caminho)
+            if fase.id != numero:
+                raise ValueError(f"O ID da fase deve ser {numero} para esse arquivo.")
+        except (OSError, ValueError, RecursionError) as erro:
+            logging.warning("Fase indisponível em %s: %s", caminho, erro)
+            continue
+        fases[numero] = fase
+    return fases

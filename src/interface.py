@@ -5,11 +5,13 @@ HUD superior e a tela de resultado.
 """
 
 import math
+from pathlib import Path
 from typing import Optional, Tuple
 import pygame
 
 from src.jogo import Jogo
-from src.fases import Casa
+
+PASTA_ASSETS = Path(__file__).resolve().parents[1] / "assets" / "conecte_a_cidade_v1"
 
 # Paleta de cores do jogo
 COR_FUNDO = (18, 24, 38)
@@ -20,7 +22,7 @@ COR_TEXTO_MUTED = (140, 155, 180)
 COR_TEXTO_DESTAQUE = (255, 215, 80)
 COR_ALERTA = (255, 75, 75)
 
-COR_LIGACAO_POSSIVEL = (60, 75, 105)
+COR_LIGACAO_POSSIVEL = (110, 137, 164)
 COR_CABO_NORMAL = (30, 200, 255)
 COR_CABO_REDUNDANTE = (255, 140, 20)
 COR_PREVIA_VALIDA = (255, 255, 255)
@@ -47,11 +49,51 @@ class RenderizadorJogo:
         self.fonte_pequena = pygame.font.SysFont("Arial", 12, bold=True)
         self.fonte_destaque = pygame.font.SysFont("Arial", 26, bold=True)
 
-        self.raio_casa = 22
+        self.fundo_mapa = self._carregar_imagem(
+            "background/Fundo Mapa.png", (largura, altura), preencher=True
+        )
+        self.moldura = self._carregar_imagem("ui/moldura_fase.png", (590, 350))
+        self.sprites = {
+            "central": self._carregar_imagem("sprites/central_energia.png", (88, 88)),
+            "ligada": self._carregar_imagem("sprites/casa_acesa.png", (88, 88)),
+            "desligada": self._carregar_imagem("sprites/casa_apagada.png", (88, 88)),
+        }
+        casa_ligada = self.sprites["ligada"]
+        self.icone_casa = (
+            pygame.transform.smoothscale(casa_ligada, (26, 26))
+            if casa_ligada is not None else None
+        )
+        self.icone_moeda = self._carregar_imagem("hud/moeda.png", (22, 22))
+        self.icone_alerta = self._carregar_imagem("hud/alerta_cruzamento.png", (22, 22))
+        self.estrela_cheia = self._carregar_imagem("hud/estrela_cheia.png", (44, 44))
+        self.estrela_vazia = self._carregar_imagem("hud/estrela_vazia.png", (44, 44))
+        self.raio_casa = 32
+
+    def _carregar_imagem(
+        self, arquivo: str, tamanho: Tuple[int, int], preencher: bool = False
+    ) -> Optional[pygame.Surface]:
+        """Carrega e redimensiona a imagem uma vez, com alternativa desenhada se faltar."""
+        try:
+            imagem = pygame.image.load(str(PASTA_ASSETS / arquivo))
+        except (OSError, pygame.error):
+            return None
+        if pygame.display.get_surface() is not None:
+            imagem = imagem.convert_alpha()
+        if preencher:
+            largura, altura = tamanho
+            fator = max(largura / imagem.get_width(), altura / imagem.get_height())
+            tamanho_escalado = (math.ceil(imagem.get_width() * fator), math.ceil(imagem.get_height() * fator))
+            imagem = pygame.transform.smoothscale(imagem, tamanho_escalado)
+            recorte = pygame.Rect((0, 0), tamanho)
+            recorte.center = imagem.get_rect().center
+            return imagem.subsurface(recorte)
+        return pygame.transform.smoothscale(imagem, tamanho)
 
     def desenhar(self, superficie: pygame.Surface, jogo: Jogo, pos_mouse: Tuple[int, int]) -> None:
         """Desenha o quadro completo do jogo."""
         superficie.fill(COR_FUNDO)
+        if self.fundo_mapa is not None:
+            superficie.blit(self.fundo_mapa, (0, 0))
 
         # 1. Desenha as conexões possíveis (fundo)
         self._desenhar_ligacoes_possiveis(superficie, jogo)
@@ -127,47 +169,42 @@ class RenderizadorJogo:
 
     def _desenhar_casas(self, sup: pygame.Surface, jogo: Jogo) -> None:
         """Desenha os ícones das casas com iluminação e destaque da central."""
-        superficie_brilho = pygame.Surface((self.largura, self.altura), pygame.SRCALPHA)
-
         for casa in jogo.fase.casas:
             cx, cy = int(casa.x), int(casa.y)
             ligada = casa.id in jogo.casas_na_rede
             selecionada = (casa.id == jogo.casa_selecionada)
 
-            # 1. Halo suave de luz para casas na rede
-            if ligada:
-                pygame.draw.circle(superficie_brilho, COR_HALO_BRILHO, (cx, cy), self.raio_casa + 12)
-
-            # 2. Cor do corpo da casa
             if casa.central:
+                sprite = self.sprites["central"]
                 cor_corpo = COR_CASA_CENTRAL
             elif ligada:
+                sprite = self.sprites["ligada"]
                 cor_corpo = COR_CASA_LIGADA
             else:
+                sprite = self.sprites["desligada"]
                 cor_corpo = COR_CASA_DESCONECTADA
 
-            # Desenha círculo base
-            pygame.draw.circle(sup, cor_corpo, (cx, cy), self.raio_casa)
-
-            # Borda externa
-            cor_borda = (255, 255, 255) if selecionada else (25, 30, 45)
-            largura_borda = 4 if selecionada else 2
-            pygame.draw.circle(sup, cor_borda, (cx, cy), self.raio_casa, width=largura_borda)
-
-            # Ícone interno geométrico
-            if casa.central:
-                # Ícone de torre / raio na central
-                self._desenhar_icone_central(sup, cx, cy)
+            if sprite is not None:
+                sup.blit(sprite, sprite.get_rect(center=(cx, cy)))
             else:
-                # Telhado e corpo simples de casinha
-                self._desenhar_icone_casa(sup, cx, cy, ligada)
+                if ligada:
+                    brilho = pygame.Surface((68, 68), pygame.SRCALPHA)
+                    pygame.draw.circle(brilho, COR_HALO_BRILHO, (34, 34), 34)
+                    sup.blit(brilho, brilho.get_rect(center=(cx, cy)))
+                pygame.draw.circle(sup, cor_corpo, (cx, cy), 22)
+                if casa.central:
+                    self._desenhar_icone_central(sup, cx, cy)
+                else:
+                    self._desenhar_icone_casa(sup, cx, cy, ligada)
+
+            if selecionada:
+                pygame.draw.circle(sup, COR_TEXTO_CLARO, (cx, cy), self.raio_casa + 4, width=2)
 
             # Rótulo com o número da casa
             txt_id = self.fonte_pequena.render(str(casa.id), True, (255, 255, 255))
             rect_txt = txt_id.get_rect(center=(cx, cy + self.raio_casa + 12))
+            pygame.draw.rect(sup, COR_HUD_FUNDO, rect_txt.inflate(10, 4), border_radius=5)
             sup.blit(txt_id, rect_txt)
-
-        sup.blit(superficie_brilho, (0, 0))
 
     def _desenhar_icone_central(self, sup: pygame.Surface, cx: int, cy: int) -> None:
         """Desenha um símbolo geométrico de torre/raio na central."""
@@ -235,7 +272,9 @@ class RenderizadorJogo:
         n_total = jogo.fase.grafo.n
         n_conectadas = len(jogo.casas_na_rede)
         txt_rede = self.fonte_normal.render(f"Casas na rede: {n_conectadas}/{n_total}", True, COR_TEXTO_MUTED)
-        sup.blit(txt_rede, (20, 36))
+        if self.icone_casa is not None:
+            sup.blit(self.icone_casa, (16, 31))
+        sup.blit(txt_rede, (44 if self.icone_casa is not None else 20, 36))
 
         # 3. Orçamento e Gastos
         restante = jogo.orcamento_restante
@@ -244,16 +283,25 @@ class RenderizadorJogo:
         txt_orc = self.fonte_normal.render(texto_orcamento, True, cor_restante)
         rect_orc = txt_orc.get_rect(topright=(self.largura - 20, 10))
         sup.blit(txt_orc, rect_orc)
+        if self.icone_moeda is not None:
+            sup.blit(self.icone_moeda, self.icone_moeda.get_rect(midright=(rect_orc.left - 4, rect_orc.centery)))
+
+        if jogo.fase.sem_cruzamento:
+            txt_regra = self.fonte_pequena.render("Cabos não podem cruzar", True, COR_TEXTO_CLARO)
+            rect_regra = txt_regra.get_rect(topright=(self.largura - 20, 38))
+            sup.blit(txt_regra, rect_regra)
+            if self.icone_alerta is not None:
+                sup.blit(self.icone_alerta, self.icone_alerta.get_rect(midright=(rect_regra.left - 4, rect_regra.centery)))
 
         # 4. Mensagem de Feedback de uma linha
         cor_feedback = COR_ALERTA if jogo.beco_sem_saida else COR_TEXTO_MUTED
         txt_msg = self.fonte_pequena.render(jogo.mensagem_feedback, True, cor_feedback)
-        sup.blit(txt_msg, (280, 14))
+        sup.blit(txt_msg, (320, 14))
 
         # 5. Dica de comandos
-        dica = "[Clique] Conectar/Remover  |  [Z] Desfazer  |  [R] Reiniciar  |  [ESC] Sair"
+        dica = "[Clique] Conectar/Remover  |  [Z] Desfazer  |  [R] Reiniciar  |  [ESC] Pausar"
         txt_dica = self.fonte_pequena.render(dica, True, (110, 125, 150))
-        sup.blit(txt_dica, (280, 38))
+        sup.blit(txt_dica, (320, 38))
 
     def _desenhar_painel_vitoria(self, sup: pygame.Surface, jogo: Jogo) -> None:
         """Exibe o modal com a pontuação e estrelas conquistadas."""
@@ -263,20 +311,20 @@ class RenderizadorJogo:
         sup.blit(overlay, (0, 0))
 
         # Caixa do painel
-        largura_p, altura_p = 480, 300
+        largura_p, altura_p = 590, 350
         cx, cy = self.largura // 2, self.altura // 2
         rect_painel = pygame.Rect(cx - largura_p // 2, cy - altura_p // 2, largura_p, altura_p)
-        pygame.draw.rect(sup, (24, 32, 50), rect_painel, border_radius=12)
-        pygame.draw.rect(sup, COR_CABO_NORMAL, rect_painel, width=2, border_radius=12)
+        if self.moldura is not None:
+            sup.blit(self.moldura, self.moldura.get_rect(center=(cx, cy)))
+        else:
+            pygame.draw.rect(sup, (24, 32, 50), rect_painel, border_radius=12)
+            pygame.draw.rect(sup, COR_CABO_NORMAL, rect_painel, width=2, border_radius=12)
 
         # Título
         txt_vitoria = self.fonte_destaque.render("FASE CONCLUÍDA!", True, COR_TEXTO_DESTAQUE)
-        sup.blit(txt_vitoria, txt_vitoria.get_rect(center=(cx, cy - 100)))
+        sup.blit(txt_vitoria, txt_vitoria.get_rect(center=(cx, cy - 117)))
 
-        # Estrelas (★)
-        estrelas_str = "★ " * jogo.resultado.estrelas + "☆ " * (3 - jogo.resultado.estrelas)
-        txt_estrelas = self.fonte_destaque.render(estrelas_str.strip(), True, (255, 220, 40))
-        sup.blit(txt_estrelas, txt_estrelas.get_rect(center=(cx, cy - 60)))
+        self._desenhar_estrelas(sup, jogo.resultado.estrelas, cx, cy - 70)
 
         # Estatísticas
         res = jogo.resultado
@@ -287,8 +335,14 @@ class RenderizadorJogo:
         ]
         for idx, linha in enumerate(linhas):
             txt_linha = self.fonte_normal.render(linha, True, COR_TEXTO_CLARO)
-            sup.blit(txt_linha, txt_linha.get_rect(center=(cx, cy - 10 + idx * 26)))
+            sup.blit(txt_linha, txt_linha.get_rect(center=(cx, cy - 24 + idx * 26)))
 
-        # Ações
-        txt_acoes = self.fonte_pequena.render("Pressione [R] para jogar novamente ou [ESC] para fechar", True, COR_TEXTO_MUTED)
-        sup.blit(txt_acoes, txt_acoes.get_rect(center=(cx, cy + 105)))
+    def _desenhar_estrelas(self, sup: pygame.Surface, quantidade: int, x: int, y: int) -> None:
+        """Desenha as três estrelas, preenchendo as que foram conquistadas."""
+        for indice in range(3):
+            conquistada = indice < quantidade
+            estrela = self.estrela_cheia if conquistada else self.estrela_vazia
+            if estrela is None:
+                simbolo = "★" if conquistada else "☆"
+                estrela = self.fonte_destaque.render(simbolo, True, COR_TEXTO_DESTAQUE)
+            sup.blit(estrela, estrela.get_rect(center=(x + (indice - 1) * 48, y)))

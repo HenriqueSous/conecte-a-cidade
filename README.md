@@ -33,10 +33,12 @@ pip install -r requirements.txt
 
 > **Atenção:** Certifique-se de usar `pygame-ce` (`pip install pygame-ce`), e não o `pygame` antigo.
 
-### 3. Executar o Jogo (Fase 1 - Tutorial)
+### 3. Executar o Jogo
 ```bash
 python main.py
 ```
+
+O jogo abre no menu principal. **Jogar** inicia a primeira fase disponível ainda não concluída. **Selecionar Fase** permite repetir fases desbloqueadas e mostra as estrelas conquistadas. Os espaços reservados para fases futuras aparecem como **Em breve**.
 
 ---
 
@@ -49,7 +51,9 @@ python main.py
 | **Cancelar seleção** | Clique com o **Botão Direito** ou no fundo do mapa |
 | **Desfazer última ação** | Tecla **Z** |
 | **Reiniciar fase** | Tecla **R** |
-| **Sair do jogo** | Tecla **ESC** |
+| **Pausar ou continuar** | Tecla **ESC** |
+
+Ao concluir uma fase, o jogo grava a conclusão e os recordes em `progresso.json`, ao lado de `main.py`. Esse arquivo é carregado automaticamente na próxima execução. Cada nova fase deve ter um JSON válido em `dados/fases/`, com nome `fase_NN.json` e ID correspondente. A fase fica disponível se a anterior já tiver sido concluída.
 
 ### Dicas de Estratégia
 - **Casas ligadas à rede** acendem em **dourado**. As isoladas permanecem em cinza escuro.
@@ -90,7 +94,9 @@ Conecte a Cidade/
 │   ├── fases.py                # Leitura e validação dos arquivos JSON
 │   ├── jogo.py                 # Máquina de regras da partida (sem pygame)
 │   ├── pontuacao.py            # Cálculo de aproveitamento, estrelas e pontos
-│   └── interface.py            # Renderizador gráfico do mapa e HUD com pygame-ce
+│   ├── interface.py            # Renderizador do mapa, HUD e painel de vitória
+│   ├── telas.py                # Menu, seleção de fases, instruções e pausa
+│   └── progresso.py            # Leitura e salvamento dos recordes da campanha
 ├── dados/
 │   └── fases/
 │       └── fase_01.json        # Configuração da Fase 1 (Tutorial)
