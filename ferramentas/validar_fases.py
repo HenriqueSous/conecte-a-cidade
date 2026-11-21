@@ -1,10 +1,11 @@
 """
 Ferramenta para validação de fases do jogo Conecte a Cidade.
-Executa a validação cruzada entre Kruskal e Prim, checa orçamento,
-conectividade, distâncias mínimas e integridade dos arquivos JSON.
+Compara Prim e Kruskal e verifica orçamento, legibilidade do mapa e o custo
+da estratégia que escolhe as ligações pela distância visual.
 """
 
 import glob
+from itertools import combinations
 import math
 import os
 import sys
@@ -14,12 +15,14 @@ import time
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.algoritmos import kruskal, prim, verificar_conectividade
-from src.fases import carregar_fase
+from src.fases import Fase, Ligacao, carregar_fase
+from src.geometria import Ponto
+from src.grafo import Grafo
 
 
 FATORES_ORCAMENTO = {
     1: 1.60,
-    2: 1.50,
+    2: 1.40,
     3: 1.40,
     4: 1.30,
     5: 1.22,
@@ -29,6 +32,60 @@ FATORES_ORCAMENTO = {
     9: 1.12,
     10: 1.05
 }
+
+ALTURA_ROTULO = 16
+RAIO_AREA_CASA = 36
+
+
+def custo_vizinhas_mais_proximas(fase: Fase) -> int:
+    """Usa Prim para ligar a rede à vizinha mais próxima e soma os custos reais."""
+    def comprimento(ligacao: Ligacao) -> float:
+        origem = fase.obter_posicao(ligacao.de)
+        destino = fase.obter_posicao(ligacao.para)
+        return math.dist(origem, destino)
+
+    grafo_distancias = Grafo(fase.grafo.n)
+    # Troca os custos pela ordem das distâncias para reaproveitar pesos inteiros no Prim.
+    ligacoes = sorted(fase.ligacoes, key=comprimento)
+    for ordem, ligacao in enumerate(ligacoes, start=1):
+        grafo_distancias.adicionar_aresta(ligacao.de, ligacao.para, ordem)
+
+    _, rede = prim(grafo_distancias, inicio=0)
+    return sum(ligacoes[ordem - 1].custo for _, _, ordem in rede)
+
+
+def distancia_ate_segmento(ponto: Ponto, inicio: Ponto, fim: Ponto) -> float:
+    """Mede a distância do ponto à sua projeção dentro do segmento."""
+    dx, dy = fim[0] - inicio[0], fim[1] - inicio[1]
+    produto_escalar = (ponto[0] - inicio[0]) * dx + (ponto[1] - inicio[1]) * dy
+    fracao = max(0, min(1, produto_escalar / (dx * dx + dy * dy)))
+    projecao = (inicio[0] + fracao * dx, inicio[1] + fracao * dy)
+    return math.dist(ponto, projecao)
+
+
+def verificar_legibilidade(fase: Fase) -> list[str]:
+    """Identifica ligações que passam por casas e possíveis colisões de rótulos."""
+    avisos = []
+    rotulos = []
+    for ligacao in fase.ligacoes:
+        inicio = fase.obter_posicao(ligacao.de)
+        fim = fase.obter_posicao(ligacao.para)
+        nome = f"{ligacao.de}–{ligacao.para}"
+        x, y = (int((a + b) / 2) for a, b in zip(inicio, fim))
+        # Estima a largura da caixa do Pygame com folga para diferenças de fonte.
+        largura = max(20, 8 + 9 * len(str(ligacao.custo)))
+        rotulos.append((nome, x, y, largura))
+
+        for casa in fase.casas:
+            if casa.id in (ligacao.de, ligacao.para):
+                continue
+            if distancia_ate_segmento((casa.x, casa.y), inicio, fim) < RAIO_AREA_CASA:
+                avisos.append(f"A ligação {nome} passa pela área da casa {casa.id}.")
+
+    for (nome_a, xa, ya, largura_a), (nome_b, xb, yb, largura_b) in combinations(rotulos, 2):
+        if abs(xa - xb) * 2 < largura_a + largura_b and abs(ya - yb) < ALTURA_ROTULO:
+            avisos.append(f"Os rótulos de custo das ligações {nome_a} e {nome_b} podem se sobrepor.")
+    return avisos
 
 
 def validar_fase_individual(caminho_arquivo: str) -> bool:
@@ -51,22 +108,31 @@ def validar_fase_individual(caminho_arquivo: str) -> bool:
         return False
 
     # 2. Validação cruzada: Kruskal vs Prim
-    custo_kruskal, agm_kruskal = kruskal(n, arestas)
-    custo_prim, agm_prim = prim(fase.grafo, inicio=0)
+    custo_kruskal, _ = kruskal(n, arestas)
+    custo_prim, _ = prim(fase.grafo, inicio=0)
 
     if custo_kruskal != custo_prim:
         print(f"[ERRO] Divergência na AGM! Kruskal deu {custo_kruskal} e Prim deu {custo_prim}.")
         return False
 
-    if not fase.sem_cruzamento:
-        if fase.par != custo_kruskal:
-            print(f"[AVISO] Par gravado ({fase.par}) difere da AGM ({custo_kruskal}).")
-    
+    if not fase.sem_cruzamento and fase.par != custo_kruskal:
+        print(f"[ERRO] Par gravado ({fase.par}) difere da AGM ({custo_kruskal}).")
+        return False
+
     # 3. Validação do orçamento
     fator_esperado = FATORES_ORCAMENTO.get(fase.id, 1.30)
     orcamento_calculado = math.ceil(fase.par * fator_esperado)
     if fase.orcamento != orcamento_calculado:
         print(f"[AVISO] Orçamento gravado ({fase.orcamento}) difere de ceil(par * {fator_esperado}) = {orcamento_calculado}")
+
+    if fase.id >= 2:
+        custo_por_distancia = custo_vizinhas_mais_proximas(fase)
+        print(f"Custo ao ligar as vizinhas mais próximas: {custo_por_distancia}")
+        if custo_por_distancia == fase.par:
+            print("[AVISO] Escolher as ligações pela distância visual atingiu o par.")
+
+    for aviso in verificar_legibilidade(fase):
+        print(f"[AVISO] {aviso}")
 
     tempo_ms = (time.perf_counter() - inicio_tempo) * 1000
 

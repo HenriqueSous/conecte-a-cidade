@@ -40,6 +40,8 @@ python main.py
 
 O jogo abre no menu principal. **Jogar** inicia a primeira fase disponível ainda não concluída. **Selecionar Fase** permite repetir fases desbloqueadas e mostra as estrelas conquistadas. Os espaços reservados para fases futuras aparecem como **Em breve**.
 
+Conclua **Primeiras Conexões** para liberar a fase 2, **Rotas do Bairro**. Compare os custos dos cabos para decidir por onde expandir a rede entre as oito casas.
+
 ---
 
 ## 🎮 Como Jogar
@@ -74,7 +76,7 @@ pytest
 ```bash
 python ferramentas/validar_fases.py
 ```
-A ferramenta verifica se o JSON é válido, se o grafo é conexo, se o orçamento obedece ao fator e realiza a **validação cruzada entre Kruskal e Prim** para certificar a solução ótima gravada.
+A ferramenta verifica o JSON e o orçamento, compara **Kruskal e Prim** e avisa sobre problemas de legibilidade do mapa. A partir da fase 2, também compara o par com o custo de escolher as ligações pela distância visual.
 
 ---
 
@@ -99,14 +101,16 @@ Conecte a Cidade/
 │   └── progresso.py            # Leitura e salvamento dos recordes da campanha
 ├── dados/
 │   └── fases/
-│       └── fase_01.json        # Configuração da Fase 1 (Tutorial)
+│       ├── fase_01.json        # Primeiras Conexões
+│       └── fase_02.json        # Rotas do Bairro
 ├── ferramentas/
 │   └── validar_fases.py        # Validador de consistência e solução ideal
 ├── tests/
 │   ├── test_algoritmos.py      # Testes de Kruskal, Prim, BFS e DSU
 │   ├── test_geometria.py       # Testes de interseção de retas e casos de borda
-│   ├── test_fases.py           # Testes de carga e integridade da Fase 1
-│   └── test_jogo.py            # Testes das regras de negócio e orçamento
+│   ├── test_fases.py           # Testes de carregamento e design das fases
+│   ├── test_jogo.py            # Testes das regras de negócio e orçamento
+│   └── test_menu.py            # Testes de navegação e progresso
 └── docs/
     ├── CONCEITOS.md            # Relação matéria teórica -> funções do código
     └── DECISOES.md             # Diário de bordo de decisões de engenharia

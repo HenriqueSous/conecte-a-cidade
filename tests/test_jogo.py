@@ -118,3 +118,26 @@ def test_pontuacao_calculos():
     # Aproveitamento < 85% -> 1 estrela
     # Ex: par=46, gasto=65 -> 46/65 = 70.76%
     assert calcular_estrelas(65, 46) == 1
+
+
+def test_fase_02_detecta_beco_sem_saida_e_permite_corrigir():
+    jogo = Jogo(carregar_fase(obter_caminho_fase(2)))
+    for origem, destino in [(0, 3), (2, 3), (2, 5), (3, 5), (0, 2)]:
+        assert jogo.selecionar_casa(origem)
+        assert jogo.selecionar_casa(destino)
+
+    assert jogo.gasto == 66
+    assert (3, 5) in jogo.cabos_redundantes
+    assert (0, 2) in jogo.cabos_redundantes
+    assert jogo.beco_sem_saida
+    assert jogo.desfazer()
+    assert jogo.gasto == 49
+    assert not jogo.beco_sem_saida
+
+    for origem, destino in [(3, 6), (4, 6), (1, 4), (5, 7)]:
+        assert jogo.selecionar_casa(origem)
+        assert jogo.selecionar_casa(destino)
+    assert jogo.vitoria
+    assert jogo.resultado.custo_jogador == 97
+    assert jogo.resultado.pontos == 814
+    assert jogo.resultado.estrelas == 1

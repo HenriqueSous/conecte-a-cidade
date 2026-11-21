@@ -10,3 +10,5 @@ Este documento registra decisões pontuais de arquitetura e implementação toma
 - 2026-11-21: Integrado o pacote visual da pasta `assets`, com desenhos do Pygame como alternativa para arquivos ausentes.
 - 2026-11-21: O jogo verifica os arquivos de fase ao abrir e consulta a conclusão da fase anterior para liberar cada entrada válida.
 - 2026-11-21: O jogo salva a conclusão e os recordes por fase em `progresso.json` antes de mostrar o resultado da partida.
+- 2026-11-21: A fase 2 usa 8 casas e 14 ligações, com custos definidos à mão para oferecer rotas alternativas. O par é 79 e o orçamento é 111 pelo fator 1,40 da seção 8.
+- 2026-11-21: O validador usa Prim com distâncias para medir a estratégia da vizinha mais próxima e soma os custos reais dos cabos selecionados.

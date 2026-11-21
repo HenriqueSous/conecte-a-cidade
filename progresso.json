@@ -5,6 +5,12 @@
             "melhor_pontuacao": 1000,
             "melhor_custo": 46,
             "estrelas": 3
+        },
+        "2": {
+            "concluida": true,
+            "melhor_pontuacao": 832,
+            "melhor_custo": 95,
+            "estrelas": 1
         }
     }
 }

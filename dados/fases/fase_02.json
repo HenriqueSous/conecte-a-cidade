@@ -1,0 +1,33 @@
+{
+  "id": 2,
+  "nome": "Rotas do Bairro",
+  "orcamento": 111,
+  "par": 79,
+  "sem_cruzamento": false,
+  "casas": [
+    { "id": 0, "x": 138, "y": 345, "central": true },
+    { "id": 1, "x": 325, "y": 170 },
+    { "id": 2, "x": 307, "y": 507 },
+    { "id": 3, "x": 514, "y": 322 },
+    { "id": 4, "x": 620, "y": 147 },
+    { "id": 5, "x": 607, "y": 528 },
+    { "id": 6, "x": 833, "y": 251 },
+    { "id": 7, "x": 856, "y": 457 }
+  ],
+  "ligacoes": [
+    { "de": 0, "para": 1, "custo": 20 },
+    { "de": 0, "para": 2, "custo": 17 },
+    { "de": 0, "para": 3, "custo": 11 },
+    { "de": 1, "para": 3, "custo": 22 },
+    { "de": 1, "para": 4, "custo": 9 },
+    { "de": 2, "para": 3, "custo": 8 },
+    { "de": 2, "para": 5, "custo": 12 },
+    { "de": 3, "para": 4, "custo": 15 },
+    { "de": 3, "para": 5, "custo": 18 },
+    { "de": 3, "para": 6, "custo": 10 },
+    { "de": 3, "para": 7, "custo": 19 },
+    { "de": 4, "para": 6, "custo": 13 },
+    { "de": 5, "para": 7, "custo": 16 },
+    { "de": 6, "para": 7, "custo": 24 }
+  ]
+}

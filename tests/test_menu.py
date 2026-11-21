@@ -3,7 +3,6 @@ Verifica o fluxo do menu e o progresso com eventos do Pygame sem abrir janela.
 As fases de teste e o progresso ficam em um diretório temporário.
 """
 
-import json
 from pathlib import Path
 from shutil import copyfile
 
@@ -116,7 +115,7 @@ def test_navegacao_conclusao_e_repeticao(projeto_temporario, superficie):
     assert reaberto.tela_atual == "selecao"
 
 
-def test_nova_fase_reconhecida_e_desbloqueada(projeto_temporario, superficie, monkeypatch):
+def test_fase_02_reconhecida_e_desbloqueada(projeto_temporario, superficie, monkeypatch):
     carregamentos = []
     carregar_fase_real = fases.carregar_fase
 
@@ -130,27 +129,55 @@ def test_nova_fase_reconhecida_e_desbloqueada(projeto_temporario, superficie, mo
     primeira_execucao.progresso.registrar_conclusao(1, avaliar_resultado(46, 46))
 
     pasta_fases = projeto_temporario / "dados" / "fases"
-    dados = json.loads((pasta_fases / "fase_01.json").read_text(encoding="utf-8"))
-    dados.update(id=2, nome="Exemplo temporário")
-    (pasta_fases / "fase_02.json").write_text(json.dumps(dados), encoding="utf-8")
-    (pasta_fases / "fase_03.json").write_text("[]", encoding="utf-8")
+    copyfile(RAIZ_PROJETO / "dados" / "fases" / "fase_02.json", pasta_fases / "fase_02.json")
+    carregamentos.clear()
     aplicacao = Aplicacao(superficie, projeto_temporario)
     assert list(aplicacao.fases) == [1, 2]
+    assert carregamentos == ["fase_01.json", "fase_02.json"]
     clicar_botao(aplicacao, "Jogar")
     assert aplicacao.jogo.fase.id == 2
 
     (projeto_temporario / "progresso.json").unlink()
     aplicacao = Aplicacao(superficie, projeto_temporario)
     clicar_botao(aplicacao, "Selecionar Fase")
-    assert [cartao.situacao for cartao in aplicacao.cartoes[:3]] == [
-        "Disponível", "Bloqueada", "Em breve"
-    ]
+    assert [cartao.situacao for cartao in aplicacao.cartoes] == ["Disponível", "Bloqueada"] + ["Em breve"] * 3
+    assert aplicacao.cartoes[1].nome == "Rotas do Bairro"
     clicar(aplicacao, aplicacao.cartoes[1].botao.area.center)
     assert aplicacao.jogo is None
     clicar(aplicacao, aplicacao.cartoes[0].botao.area.center)
     conectar(aplicacao, [(0, 2), (3, 4), (0, 1), (2, 3)])
     clicar_botao(aplicacao, "Próxima fase")
     assert aplicacao.jogo.fase.id == 2
+
+    conectar(aplicacao, [(0, 3), (2, 3), (3, 6), (2, 5), (3, 4), (1, 4), (5, 7)])
+    assert aplicacao.tela_atual == "resultado"
+    assert aplicacao.jogo.resultado.custo_jogador == 81
+    assert aplicacao.jogo.resultado.estrelas == 2
+    clicar_botao(aplicacao, "Repetir fase")
+    conectar(aplicacao, [(0, 3), (2, 3), (3, 6), (2, 5), (4, 6), (1, 4), (5, 7)])
+    assert aplicacao.tela_atual == "resultado"
+    assert "Próxima fase" not in [botao.texto for botao in aplicacao.botoes]
+    assert "fase_03.json" not in carregamentos
+    clicar_botao(aplicacao, "Menu principal")
+    clicar_botao(aplicacao, "Sair")
+
+    reaberto = Aplicacao(superficie, projeto_temporario)
+    registro = reaberto.progresso.obter(2)
+    assert registro.concluida
+    assert registro.melhor_custo == 79
+    assert registro.melhor_pontuacao == 1000
+    assert registro.estrelas == 3
+    clicar_botao(reaberto, "Jogar")
+    assert reaberto.tela_atual == "selecao"
+    assert reaberto.cartoes[1].situacao == "Concluída"
+    assert reaberto.cartoes[1].estrelas == 3
+    assert reaberto.cartoes[2].situacao == "Em breve"
+
+
+def test_catalogo_ignora_fase_invalida(projeto_temporario):
+    caminho_invalido = projeto_temporario / "dados" / "fases" / "fase_03.json"
+    caminho_invalido.write_text("[]", encoding="utf-8")
+    assert list(fases.carregar_catalogo_fases(str(projeto_temporario))) == [1]
 
 
 @pytest.mark.parametrize("conteudo", ["{", "[]", '{"fases": {"1": false}}'])
