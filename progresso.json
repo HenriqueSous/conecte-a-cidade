@@ -1,35 +1,4 @@
 {
-    "fases": {
-        "1": {
-            "concluida": true,
-            "melhor_pontuacao": 1000,
-            "melhor_custo": 46,
-            "estrelas": 3
-        },
-        "2": {
-            "concluida": true,
-            "melhor_pontuacao": 849,
-            "melhor_custo": 93,
-            "estrelas": 1
-        },
-        "3": {
-            "concluida": true,
-            "melhor_pontuacao": 902,
-            "melhor_custo": 82,
-            "estrelas": 2
-        },
-        "4": {
-            "concluida": true,
-            "melhor_pontuacao": 923,
-            "melhor_custo": 117,
-            "estrelas": 2
-        },
-        "5": {
-            "concluida": true,
-            "melhor_pontuacao": 992,
-            "melhor_custo": 123,
-            "estrelas": 2
-        }
-    },
-    "campanha_concluida": true
+    "fases": {},
+    "campanha_concluida": false
 }
