@@ -14,3 +14,6 @@ Este documento registra decisões pontuais de arquitetura e implementação toma
 - 2026-11-21: O validador usa Prim com distâncias para medir a estratégia da vizinha mais próxima e soma os custos reais dos cabos selecionados.
 - 2026-11-21: Encruzilhada usa um único cruzamento entre dois cabos baratos. O par sem cruzamentos é 74, a AGM convencional custa 66 e o orçamento é 98 pelo fator 1,32.
 - 2026-11-21: A busca exata calcula o par no validador. Durante a partida, os cabos instalados também filtram as opções consideradas no limite inferior de custo restante.
+- 2026-11-21: Entre Bairros tem dois pontos de cruzamento interdependentes. A melhor rede custa 108, um atalho permite concluir por 117 e combinar os dois atalhos exige pelo menos 132, acima do orçamento 128 calculado com o fator 1,18.
+- 2026-11-21: Rede da Cidade tem três pontos de cruzamento, par 122 e orçamento 129. Trocar a ligação da casa 9 pelo cabo direto à central leva a rede ótima a 130.
+- 2026-11-21: A conclusão da fase 5 identifica a campanha concluída, e a pontuação total soma os recordes das cinco fases.

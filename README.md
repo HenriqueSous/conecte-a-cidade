@@ -42,6 +42,10 @@ O jogo abre no menu principal. **Jogar** inicia a primeira fase disponível aind
 
 Conclua **Primeiras Conexões** para liberar a fase 2, **Rotas do Bairro**. Ao terminar a fase 2, você libera **Encruzilhada**. Nessa fase, cabos instalados podem bloquear novas conexões. A prévia fica vermelha ao apontar para uma ligação bloqueada.
 
+Conclua **Encruzilhada** para liberar a fase 4, **Entre Bairros**. Compare os caminhos que conectam os dois lados do mapa antes de instalar os cabos. Um atalho pode forçar um desvio mais caro em outra região.
+
+**Entre Bairros** libera a fase final, **Rede da Cidade**. A vitória nela encerra a campanha e exibe a pontuação total. A seleção de fases mostra a soma dos cinco recordes, até **5.000 pontos**, e permite voltar a qualquer fase desbloqueada.
+
 ---
 
 ## 🎮 Como Jogar
@@ -55,7 +59,7 @@ Conclua **Primeiras Conexões** para liberar a fase 2, **Rotas do Bairro**. Ao t
 | **Reiniciar fase** | Tecla **R** |
 | **Pausar ou continuar** | Tecla **ESC** |
 
-Ao concluir uma fase, o jogo grava a conclusão e os recordes em `progresso.json`, ao lado de `main.py`. Esse arquivo é carregado automaticamente na próxima execução. Cada nova fase deve ter um JSON válido em `dados/fases/`, com nome `fase_NN.json` e ID correspondente. A fase fica disponível se a anterior já tiver sido concluída.
+Ao concluir uma fase, o jogo grava a conclusão e os recordes em `progresso.json`, ao lado de `main.py`. O mesmo arquivo registra a conclusão da campanha após a fase 5 e é carregado automaticamente na próxima execução. Cada nova fase deve ter um JSON válido em `dados/fases/`, com nome `fase_NN.json` e ID correspondente. A fase fica disponível se a anterior já tiver sido concluída.
 
 ### Dicas de Estratégia
 - **Casas ligadas à rede** acendem em **dourado**. As isoladas permanecem em cinza escuro.
@@ -76,7 +80,7 @@ pytest
 ```bash
 python ferramentas/validar_fases.py
 ```
-A ferramenta verifica o JSON e o orçamento, compara **Kruskal e Prim** e avisa sobre problemas de legibilidade do mapa. Em **Encruzilhada**, ela também usa busca exata com poda para conferir o par sem cruzamentos. A opção `--gravar-par` atualiza o par e o orçamento dos mapas com essa restrição.
+A ferramenta verifica o JSON e o orçamento, compara **Kruskal e Prim** e avisa sobre problemas de legibilidade do mapa. Nas fases 3 a 5, ela também usa busca exata com poda para conferir o par sem cruzamentos. A opção `--gravar-par` atualiza o par e o orçamento dos mapas com essa restrição.
 
 ---
 
@@ -103,7 +107,9 @@ Conecte a Cidade/
 │   └── fases/
 │       ├── fase_01.json        # Primeiras Conexões
 │       ├── fase_02.json        # Rotas do Bairro
-│       └── fase_03.json        # Encruzilhada
+│       ├── fase_03.json        # Encruzilhada
+│       ├── fase_04.json        # Entre Bairros
+│       └── fase_05.json        # Rede da Cidade
 ├── ferramentas/
 │   └── validar_fases.py        # Validador de consistência e solução ideal
 ├── tests/

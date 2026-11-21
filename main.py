@@ -187,11 +187,14 @@ class Aplicacao:
         if self.tela_atual == "menu":
             self.telas.desenhar_menu(self.superficie)
         elif self.tela_atual == "selecao":
-            self.telas.desenhar_selecao(self.superficie, self.cartoes, pos_mouse)
+            self.telas.desenhar_selecao(self.superficie, self.cartoes, pos_mouse, self.progresso.pontuacao_total)
         elif self.tela_atual == "instrucoes":
             self.telas.desenhar_instrucoes(self.superficie)
         elif self.jogo is not None:
-            self.renderizador.desenhar(self.superficie, self.jogo, pos_mouse)
+            pontos_campanha = None
+            if self.tela_atual == "resultado" and self.jogo.fase.id == TOTAL_FASES:
+                pontos_campanha = self.progresso.pontuacao_total
+            self.renderizador.desenhar(self.superficie, self.jogo, pos_mouse, pontos_campanha)
             if self.tela_atual == "pausa":
                 self.telas.desenhar_pausa(self.superficie)
             elif self.tela_atual == "resultado" and not self.progresso_salvo:

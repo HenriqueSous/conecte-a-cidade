@@ -18,6 +18,7 @@ from src.interface import (
     COR_TEXTO_DESTAQUE,
     COR_TEXTO_MUTED,
 )
+from src.progresso import PONTOS_MAXIMOS_CAMPANHA
 
 COR_PAINEL = (24, 35, 53)
 COR_HOVER = (27, 54, 72)
@@ -88,11 +89,14 @@ class Telas:
         self._detalhe_titulo(superficie, 247)
 
     def desenhar_selecao(
-        self, superficie: pygame.Surface, cartoes: list[CartaoFase], pos_mouse: tuple[int, int]
+        self, superficie: pygame.Surface, cartoes: list[CartaoFase], pos_mouse: tuple[int, int],
+        pontuacao_total: int,
     ) -> None:
         superficie.blit(self.fundo, (0, 0))
         self._texto(superficie, "Selecionar Fase", self.fonte_secao, (self.centro_x, 83))
         self._detalhe_titulo(superficie, 121)
+        total = f"Pontuação total: {pontuacao_total} / {PONTOS_MAXIMOS_CAMPANHA}"
+        self._texto(superficie, total, self.fonte_pequena, (self.centro_x, 142), COR_TEXTO_DESTAQUE)
         for cartao in cartoes:
             self._desenhar_cartao_fase(superficie, cartao, pos_mouse)
 

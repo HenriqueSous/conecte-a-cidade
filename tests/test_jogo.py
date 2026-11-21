@@ -165,3 +165,55 @@ def test_cabos_em_x_permitidos_com_regra_desativada():
         assert jogo.selecionar_casa(origem)
         assert jogo.selecionar_casa(destino)
     assert jogo.cabos_construidos == {(1, 3), (2, 4)}
+
+
+def test_fase_04_bloqueios_e_recuperacao_do_orcamento():
+    jogo = Jogo(carregar_fase(obter_caminho_fase(4)))
+    assert jogo.pode_construir(2, 4)[0] and jogo.pode_construir(3, 5)[0]
+    for origem, destino in [(1, 5), (2, 6)]:
+        assert jogo.selecionar_casa(origem) and jogo.selecionar_casa(destino)
+    for origem, destino in [(2, 4), (3, 5)]:
+        assert jogo.selecionar_casa(origem) and not jogo.selecionar_casa(destino)
+        assert jogo.mensagem_feedback == "Este cabo cruzaria outro cabo."
+    assert jogo.gasto == 10 and jogo.beco_sem_saida
+
+    for origem, destino in [(4, 7), (2, 10), (0, 1), (4, 5), (5, 11), (3, 8), (5, 6), (6, 9)]:
+        assert jogo.selecionar_casa(origem) and jogo.selecionar_casa(destino)
+    assert jogo.gasto == 93 and not jogo.vitoria
+    assert jogo.pode_construir(3, 6) == (False, "Orçamento insuficiente")
+
+    assert jogo.selecionar_casa(2) and jogo.selecionar_casa(6)  # Remove o cabo.
+    assert jogo.gasto == 88 and not jogo.beco_sem_saida
+    assert jogo.desfazer()
+    assert jogo.gasto == 93 and jogo.beco_sem_saida
+    assert jogo.selecionar_casa(2) and jogo.selecionar_casa(6)
+
+    for origem, destino in [(3, 5), (1, 2)]:
+        assert jogo.selecionar_casa(origem) and jogo.selecionar_casa(destino)
+    assert jogo.vitoria and len(jogo.casas_na_rede) == 12
+    assert jogo.resultado.custo_jogador == 117
+    assert jogo.resultado.pontos == 923 and jogo.resultado.estrelas == 2
+
+
+def test_fase_05_remocao_desfazer_e_vitoria_no_limite():
+    jogo = Jogo(carregar_fase(obter_caminho_fase(5)))
+    for origem, destino in [(1, 6), (2, 7), (3, 8)]:
+        assert jogo.selecionar_casa(origem) and jogo.selecionar_casa(destino)
+    assert jogo.gasto == 15 and jogo.beco_sem_saida
+    assert jogo.pode_construir(4, 7) == (False, "Este cabo cruzaria outro cabo.")
+    assert jogo.selecionar_casa(3) and jogo.selecionar_casa(8)  # Remove o terceiro atalho.
+    assert jogo.gasto == 10 and not jogo.beco_sem_saida
+    assert jogo.desfazer()  # Restaura o atalho e o beco sem saída.
+    assert jogo.beco_sem_saida
+    assert jogo.selecionar_casa(3) and jogo.selecionar_casa(8)
+
+    for origem, destino in [(4, 7), (0, 1), (2, 10), (6, 11), (5, 6), (8, 13),
+                             (4, 12), (6, 7), (7, 8), (3, 10)]:
+        assert jogo.selecionar_casa(origem) and jogo.selecionar_casa(destino)
+    assert jogo.gasto == 113 and not jogo.vitoria
+    assert jogo.selecionar_casa(0) and not jogo.selecionar_casa(9)
+    assert jogo.mensagem_feedback == "Orçamento insuficiente"
+    assert jogo.selecionar_casa(5) and jogo.selecionar_casa(9)
+    assert jogo.vitoria and len(jogo.casas_na_rede) == 14
+    assert jogo.gasto == 122 and jogo.orcamento_restante == 7
+    assert jogo.resultado.pontos == 1000 and jogo.resultado.estrelas == 3

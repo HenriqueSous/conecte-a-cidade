@@ -9,7 +9,10 @@ import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
-from src.pontuacao import ResultadoPartida
+from src.fases import TOTAL_FASES
+from src.pontuacao import PONTOS_MAXIMOS_FASE, ResultadoPartida
+
+PONTOS_MAXIMOS_CAMPANHA = TOTAL_FASES * PONTOS_MAXIMOS_FASE
 
 
 @dataclass(frozen=True)
@@ -33,6 +36,15 @@ class Progresso:
     def fase_desbloqueada(self, numero: int) -> bool:
         return numero == 1 or self.obter(numero - 1).concluida
 
+    @property
+    def campanha_concluida(self) -> bool:
+        # O registro da última fase também identifica a conclusão em arquivos antigos.
+        return self.obter(TOTAL_FASES).concluida
+
+    @property
+    def pontuacao_total(self) -> int:
+        return sum(self.obter(numero).melhor_pontuacao for numero in range(1, TOTAL_FASES + 1))
+
     def registrar_conclusao(self, numero: int, resultado: ResultadoPartida) -> bool:
         anterior = self.obter(numero)
         melhor_custo = resultado.custo_jogador
@@ -40,7 +52,7 @@ class Progresso:
             melhor_custo = min(anterior.melhor_custo, melhor_custo)
         self._fases[str(numero)] = RegistroFase(
             concluida=True,
-            melhor_pontuacao=max(anterior.melhor_pontuacao, resultado.pontos),
+            melhor_pontuacao=max(anterior.melhor_pontuacao, min(resultado.pontos, PONTOS_MAXIMOS_FASE)),
             melhor_custo=melhor_custo,
             estrelas=max(anterior.estrelas, resultado.estrelas),
         )
@@ -64,18 +76,23 @@ class Progresso:
             if not isinstance(registro, dict) or registro.get("concluida") is not True:
                 continue
             pontos = registro.get("melhor_pontuacao")
+            if type(pontos) is not int:
+                pontos = 0
             custo = registro.get("melhor_custo")
             estrelas = registro.get("estrelas")
             registros[numero] = RegistroFase(
                 concluida=True,
-                melhor_pontuacao=pontos if type(pontos) is int and pontos >= 0 else 0,
+                melhor_pontuacao=max(0, min(pontos, PONTOS_MAXIMOS_FASE)),
                 melhor_custo=custo if type(custo) is int and custo > 0 else None,
                 estrelas=estrelas if type(estrelas) is int and 0 <= estrelas <= 3 else 0,
             )
         return registros
 
     def _salvar(self) -> bool:
-        dados = {"fases": {numero: asdict(registro) for numero, registro in self._fases.items()}}
+        dados = {
+            "fases": {numero: asdict(registro) for numero, registro in self._fases.items()},
+            "campanha_concluida": self.campanha_concluida,
+        }
         temporario = None
         try:
             # Substitui o progresso só depois de escrever o JSON inteiro.

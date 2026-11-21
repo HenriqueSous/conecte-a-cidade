@@ -8,6 +8,8 @@ Regras da Seção 7:
 
 from dataclasses import dataclass
 
+PONTOS_MAXIMOS_FASE = 1000
+
 
 @dataclass
 class ResultadoPartida:
@@ -34,7 +36,7 @@ def calcular_pontos(par: int, custo_jogador: int) -> int:
     """
     if custo_jogador <= 0 or par <= 0:
         return 0
-    return min(1000, round(1000.0 * (par / custo_jogador)))
+    return min(PONTOS_MAXIMOS_FASE, round(PONTOS_MAXIMOS_FASE * (par / custo_jogador)))
 
 
 def calcular_estrelas(custo_jogador: int, par: int) -> int:

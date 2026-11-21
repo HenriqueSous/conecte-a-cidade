@@ -10,6 +10,7 @@ from typing import Optional, Tuple
 import pygame
 
 from src.jogo import Jogo, MENSAGEM_CRUZAMENTO
+from src.progresso import PONTOS_MAXIMOS_CAMPANHA
 
 PASTA_ASSETS = Path(__file__).resolve().parents[1] / "assets" / "conecte_a_cidade_v1"
 
@@ -89,7 +90,10 @@ class RenderizadorJogo:
             return imagem.subsurface(recorte)
         return pygame.transform.smoothscale(imagem, tamanho)
 
-    def desenhar(self, superficie: pygame.Surface, jogo: Jogo, pos_mouse: Tuple[int, int]) -> None:
+    def desenhar(
+        self, superficie: pygame.Surface, jogo: Jogo, pos_mouse: Tuple[int, int],
+        pontos_campanha: int | None = None,
+    ) -> None:
         """Desenha o quadro completo do jogo."""
         superficie.fill(COR_FUNDO)
         if self.fundo_mapa is not None:
@@ -113,7 +117,7 @@ class RenderizadorJogo:
 
         # 6. Se o jogador venceu, desenha painel de vitória
         if jogo.vitoria and jogo.resultado:
-            self._desenhar_painel_vitoria(superficie, jogo)
+            self._desenhar_painel_vitoria(superficie, jogo, pontos_campanha)
 
     def obter_casa_sob_mouse(self, jogo: Jogo, pos_mouse: Tuple[int, int]) -> Optional[int]:
         """Retorna o ID da casa sob a coordenada do mouse, se houver."""
@@ -304,7 +308,9 @@ class RenderizadorJogo:
         txt_dica = self.fonte_pequena.render(dica, True, (110, 125, 150))
         sup.blit(txt_dica, (320, 38))
 
-    def _desenhar_painel_vitoria(self, sup: pygame.Surface, jogo: Jogo) -> None:
+    def _desenhar_painel_vitoria(
+        self, sup: pygame.Surface, jogo: Jogo, pontos_campanha: int | None
+    ) -> None:
         """Exibe o modal com a pontuação e estrelas conquistadas."""
         assert jogo.resultado is not None
         overlay = pygame.Surface((self.largura, self.altura), pygame.SRCALPHA)
@@ -322,7 +328,10 @@ class RenderizadorJogo:
             pygame.draw.rect(sup, COR_CABO_NORMAL, rect_painel, width=2, border_radius=12)
 
         # Título
-        txt_vitoria = self.fonte_destaque.render("FASE CONCLUÍDA!", True, COR_TEXTO_DESTAQUE)
+        titulo = "FASE CONCLUÍDA!"
+        if pontos_campanha is not None:
+            titulo = "Parabéns! Você conectou toda a cidade!"
+        txt_vitoria = self.fonte_destaque.render(titulo, True, COR_TEXTO_DESTAQUE)
         sup.blit(txt_vitoria, txt_vitoria.get_rect(center=(cx, cy - 117)))
 
         self._desenhar_estrelas(sup, jogo.resultado.estrelas, cx, cy - 70)
@@ -334,9 +343,13 @@ class RenderizadorJogo:
             f"Aproveitamento: {res.aproveitamento:.1f}%",
             f"Pontuação: {res.pontos} pontos"
         ]
+        y_inicial, passo = cy - 24, 26
+        if pontos_campanha is not None:
+            linhas.append(f"Pontuação total: {pontos_campanha} / {PONTOS_MAXIMOS_CAMPANHA}")
+            y_inicial, passo = cy - 30, 22
         for idx, linha in enumerate(linhas):
             txt_linha = self.fonte_normal.render(linha, True, COR_TEXTO_CLARO)
-            sup.blit(txt_linha, txt_linha.get_rect(center=(cx, cy - 24 + idx * 26)))
+            sup.blit(txt_linha, txt_linha.get_rect(center=(cx, y_inicial + idx * passo)))
 
     def _desenhar_estrelas(self, sup: pygame.Surface, quantidade: int, x: int, y: int) -> None:
         """Desenha as três estrelas, preenchendo as que foram conquistadas."""
