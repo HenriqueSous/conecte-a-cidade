@@ -50,14 +50,20 @@ class RenderizadorJogo:
         self.fonte_pequena = pygame.font.SysFont("Arial", 12, bold=True)
         self.fonte_destaque = pygame.font.SysFont("Arial", 26, bold=True)
 
-        self.fundo_mapa = self._carregar_imagem(
+        self.fundo_padrao = self._carregar_imagem(
             "background/Fundo Mapa.png", (largura, altura), preencher=True
         )
+        self.fundos_por_fase: dict[int, pygame.Surface | None] = {}
         self.moldura = self._carregar_imagem("ui/moldura_fase.png", (590, 350))
         self.sprites = {
             "central": self._carregar_imagem("sprites/central_energia.png", (88, 88)),
             "ligada": self._carregar_imagem("sprites/casa_acesa.png", (88, 88)),
             "desligada": self._carregar_imagem("sprites/casa_apagada.png", (88, 88)),
+        }
+        # O brilho e as margens transparentes variam entre os três PNGs.
+        self.centros_sprites = {
+            sprite: sprite.get_bounding_rect(min_alpha=128).center
+            for sprite in self.sprites.values() if sprite is not None
         }
         casa_ligada = self.sprites["ligada"]
         self.icone_casa = (
@@ -95,9 +101,19 @@ class RenderizadorJogo:
         pontos_campanha: int | None = None,
     ) -> None:
         """Desenha o quadro completo do jogo."""
+        fase_id = jogo.fase.id
+        if fase_id not in self.fundos_por_fase:
+            fundo = self._carregar_imagem(
+                f"background/alinhados/fundo_fase_{fase_id}.png",
+                (self.largura, self.altura),
+                preencher=True,
+            )
+            self.fundos_por_fase[fase_id] = fundo if fundo is not None else self.fundo_padrao
+
         superficie.fill(COR_FUNDO)
-        if self.fundo_mapa is not None:
-            superficie.blit(self.fundo_mapa, (0, 0))
+        fundo = self.fundos_por_fase[fase_id]
+        if fundo is not None:
+            superficie.blit(fundo, (0, 0))
 
         # 1. Desenha as conexões possíveis (fundo)
         self._desenhar_ligacoes_possiveis(superficie, jogo)
@@ -189,7 +205,8 @@ class RenderizadorJogo:
                 cor_corpo = COR_CASA_DESCONECTADA
 
             if sprite is not None:
-                sup.blit(sprite, sprite.get_rect(center=(cx, cy)))
+                centro_x, centro_y = self.centros_sprites[sprite]
+                sup.blit(sprite, (cx - centro_x, cy - centro_y))
             else:
                 if ligada:
                     brilho = pygame.Surface((68, 68), pygame.SRCALPHA)
@@ -203,12 +220,6 @@ class RenderizadorJogo:
 
             if selecionada:
                 pygame.draw.circle(sup, COR_TEXTO_CLARO, (cx, cy), self.raio_casa + 4, width=2)
-
-            # Rótulo com o número da casa
-            txt_id = self.fonte_pequena.render(str(casa.id), True, (255, 255, 255))
-            rect_txt = txt_id.get_rect(center=(cx, cy + self.raio_casa + 12))
-            pygame.draw.rect(sup, COR_HUD_FUNDO, rect_txt.inflate(10, 4), border_radius=5)
-            sup.blit(txt_id, rect_txt)
 
     def _desenhar_icone_central(self, sup: pygame.Surface, cx: int, cy: int) -> None:
         """Desenha um símbolo geométrico de torre/raio na central."""
