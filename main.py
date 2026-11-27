@@ -7,6 +7,7 @@ from functools import partial
 from pathlib import Path
 
 import pygame
+from pygame._sdl2 import Window
 
 from src.fases import TOTAL_FASES, carregar_catalogo_fases
 from src.interface import RenderizadorJogo
@@ -16,6 +17,7 @@ from src.telas import CartaoFase, Telas
 
 LARGURA_TELA = 1000
 ALTURA_TELA = 680
+TAMANHO_JOGO = (LARGURA_TELA, ALTURA_TELA)
 FPS = 60
 RAIZ_PROJETO = Path(__file__).resolve().parent
 
@@ -24,7 +26,9 @@ class Aplicacao:
     """Encaminha os eventos para a tela atual e salva a vitória da partida."""
 
     def __init__(self, superficie: pygame.Surface, pasta_projeto: Path = RAIZ_PROJETO) -> None:
-        self.superficie = superficie
+        self.janela = superficie
+        self.tamanho_janela = superficie.get_size()
+        self._ajustar_area_jogo()
         self.fases = carregar_catalogo_fases(str(pasta_projeto))
         self.progresso = Progresso(pasta_projeto / "progresso.json")
         self.telas = Telas(LARGURA_TELA, ALTURA_TELA)
@@ -42,7 +46,12 @@ class Aplicacao:
                 self.tratar_evento(evento)
                 if not self.rodando:
                     return
-            self.desenhar(pygame.mouse.get_pos())
+            self.desenhar(self._posicao_no_jogo(pygame.mouse.get_pos()))
+            if self.superficie is not self.janela:
+                self.janela.fill((0, 0, 0))
+                pygame.transform.smoothscale(
+                    self.superficie, self.area_jogo.size, self.janela.subsurface(self.area_jogo)
+                )
             pygame.display.flip()
             relogio.tick(FPS)
 
@@ -55,6 +64,28 @@ class Aplicacao:
             ("Como Jogar", self._abrir_instrucoes),
             ("Sair", self._sair),
         ], y=287, primeiro_em_destaque=True)
+
+    def _definir_tela_cheia(self, tela_cheia: bool) -> None:
+        if tela_cheia:
+            self.tamanho_janela = pygame.display.get_window_size()
+            self.janela = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        else:
+            self.janela = pygame.display.set_mode(self.tamanho_janela, pygame.RESIZABLE)
+        self._ajustar_area_jogo()
+
+    def _ajustar_area_jogo(self) -> None:
+        area_janela = self.janela.get_rect()
+        self.area_jogo = pygame.Rect((0, 0), TAMANHO_JOGO).fit(area_janela)
+        self.area_jogo.size = max(1, self.area_jogo.width), max(1, self.area_jogo.height)
+        self.superficie = self.janela
+        if area_janela.size != TAMANHO_JOGO:
+            self.superficie = pygame.Surface(TAMANHO_JOGO).convert(self.janela)
+
+    def _posicao_no_jogo(self, posicao: tuple[int, int]) -> tuple[int, int]:
+        area = self.area_jogo
+        x, y = posicao
+        return ((x - area.x) * LARGURA_TELA // area.width,
+                (y - area.y) * ALTURA_TELA // area.height)
 
     def _abrir_selecao(self) -> None:
         self.jogo = None
@@ -137,13 +168,21 @@ class Aplicacao:
     def tratar_evento(self, evento: pygame.event.Event) -> None:
         if evento.type == pygame.QUIT:
             self._sair()
+        elif evento.type == pygame.WINDOWMAXIMIZED and not self.janela.get_flags() & pygame.FULLSCREEN:
+            # O SDL restaura a maximização ao sair da tela cheia se ela estiver ativa ao entrar.
+            Window.from_display_module().restore()
+            self._definir_tela_cheia(True)
+        elif evento.type == pygame.WINDOWSIZECHANGED:
+            self._ajustar_area_jogo()
         elif evento.type == pygame.KEYDOWN:
             self._tratar_tecla(evento.key)
-        elif evento.type == pygame.MOUSEBUTTONDOWN:
-            self._tratar_clique(evento.button, evento.pos)
+        elif evento.type == pygame.MOUSEBUTTONDOWN and self.area_jogo.collidepoint(evento.pos):
+            self._tratar_clique(evento.button, self._posicao_no_jogo(evento.pos))
 
     def _tratar_tecla(self, tecla: int) -> None:
-        if tecla == pygame.K_ESCAPE:
+        if tecla == pygame.K_F11:
+            self._definir_tela_cheia(not self.janela.get_flags() & pygame.FULLSCREEN)
+        elif tecla == pygame.K_ESCAPE:
             if self.tela_atual == "partida":
                 self._pausar()
             elif self.tela_atual == "pausa":
@@ -206,7 +245,7 @@ def main() -> None:
     pygame.init()
     try:
         pygame.display.set_caption("Conecte a Cidade")
-        superficie = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
+        superficie = pygame.display.set_mode(TAMANHO_JOGO, pygame.RESIZABLE)
         Aplicacao(superficie).executar()
     finally:
         pygame.quit()

@@ -32,7 +32,7 @@ def superficie(monkeypatch):
     monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
     pygame.init()
     try:
-        yield pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
+        yield pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA), pygame.RESIZABLE)
     finally:
         pygame.quit()
 
@@ -401,6 +401,34 @@ def test_progresso_corrompido_pode_ser_regravado(tmp_path, conteudo):
     assert not progresso.fase_desbloqueada(2)
     assert progresso.registrar_conclusao(1, avaliar_resultado(46, 46))
     assert Progresso(caminho).fase_desbloqueada(2)
+
+
+def test_maximizar_abre_tela_cheia_e_mantem_a_partida(projeto_temporario, superficie):
+    aplicacao = Aplicacao(superficie, projeto_temporario)
+    aplicacao.tratar_evento(pygame.event.Event(pygame.WINDOWMAXIMIZED))
+    assert pygame.display.get_surface().get_flags() & pygame.FULLSCREEN
+    assert aplicacao.superficie.get_size() == (LARGURA_TELA, ALTURA_TELA)
+
+    area = aplicacao.area_jogo
+
+    def clicar_em_tela_cheia(posicao):
+        x, y = posicao
+        clicar(aplicacao, (area.x + round(x * area.width / LARGURA_TELA),
+                           area.y + round(y * area.height / ALTURA_TELA)))
+
+    jogar = next(botao for botao in aplicacao.botoes if botao.texto == "Jogar")
+    clicar_em_tela_cheia(jogar.area.center)
+    jogo = aplicacao.jogo
+    assert jogo is not None
+    clicar_em_tela_cheia(jogo.fase.obter_posicao(0))
+    clicar_em_tela_cheia(jogo.fase.obter_posicao(2))
+    assert jogo.gasto == 10
+
+    aplicacao.tratar_evento(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_F11))
+    assert not pygame.display.get_surface().get_flags() & pygame.FULLSCREEN
+    assert pygame.display.get_surface().get_flags() & pygame.RESIZABLE
+    assert aplicacao.tela_atual == "partida"
+    assert aplicacao.jogo is jogo and jogo.gasto == 10
 
 
 def test_main_abre_e_encerra_com_sair(monkeypatch):

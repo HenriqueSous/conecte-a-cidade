@@ -113,9 +113,10 @@ class Telas:
             "Clique no fundo ou use o botão direito para cancelar a seleção.",
             "Z desfaz a última ação e R reinicia a fase.",
             "ESC abre o menu de pausa.",
+            "Use Maximizar ou F11 para entrar em tela cheia. F11 volta à janela.",
         ]
         for indice, texto in enumerate(controles):
-            self._texto(superficie, texto, self.fonte_texto, (self.centro_x, 303 + indice * 42))
+            self._texto(superficie, texto, self.fonte_texto, (self.centro_x, 303 + indice * 37))
 
     def desenhar_pausa(self, superficie: pygame.Surface) -> None:
         superficie.blit(self.sombra, (0, 0))
